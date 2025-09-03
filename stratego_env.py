@@ -52,7 +52,10 @@ next_id = 0
 
 def encode_piece(player, rank):
     #convert from player and rank to cell values
-    return piece(player, rank if player == RED else -rank)
+    temp = piece(player, rank if player == RED else -rank)
+    if rank == EMPTY or rank == LAKE:
+        temp.revealed = True
+    return temp
 
 def cell_player(cell):
     #returns player based on cell
@@ -132,7 +135,7 @@ class StrategoEnv:
             )
 
         reward = 0.0
-        info = {'combat': None, 'ids': None}
+        info = {'combat': None, 'ids': None, "from_rc": False, "to_rc": False}
 
         info['ids'] = {
             'moving_piece_id': self.board[fr, fc].id,
@@ -155,6 +158,10 @@ class StrategoEnv:
             self.no_capture_count = 0
             target_rank = cell_rank(target_cell)
 
+            if not self.board[fr, fc].revealed:
+                info["from_rc"] = True
+            if not self.board[tr, tc].revealed:
+                info["to_rc"] = True
             self.board[fr, fc].revealed = True
             self.board[tr, tc].revealed = True
 

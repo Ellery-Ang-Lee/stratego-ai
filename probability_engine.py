@@ -6,8 +6,19 @@ import stratego_env
 
 #initialize piece_ids to 10 * 10 * 10 with every entry being -1
 piece_ids = [[[-1 for _ in range(10)] for _ in range(10)] for _ in range(8)] #8 * 10 * H for the IDs
-
 piece_belifs = {}
+
+red_piece_count = {
+    0:1, 1:1, 2:8, 3:5, 4:4,
+    5:4, 6:4, 7:3, 8:2,
+    9:1, 10:1, 11:6
+}
+
+blue_piece_count = {
+    0:1, 1:1, 2:8, 3:5, 4:4,
+    5:4, 6:4, 7:3, 8:2,
+    9:1, 10:1, 11:6
+}
 
 def initialize():
     global piece_ids, piece_belifs
@@ -20,19 +31,20 @@ def initialize():
             piece_belifs[i] = [0,0,0,0,0,0,0,0,0,0,0,0,1,0]
         else:
             piece_belifs[i] = [1/30,1/30,8/30,5/30,4/30,4/30,4/30,3/30,2/30,1/30,1/30,0,0]
-                            #flat, 1-10, bomb, lake, empty
+                            #flag, 1-10, bomb, lake, empty
     
 def step(obs):
-    piece_ids.pop(0)
+    piece_ids.pop(0)  
     temp = []
     for i in range(10):
         for j in range(10):
             temp.append(obs["board"][i][j].id)
     piece_ids.append(temp)
 
-    print(piece_ids)
-
     
+    
+
+
 
 
 def generate_input():
