@@ -187,3 +187,166 @@ class StrategoEnv:
             winner=self.winner,
         )
         return self._observe(), reward, self.done, info
+
+    def legal_actions(self):
+        #legal actions as integers 
+        return sorted(self._gen_legal_actions())
+
+    def legal_actions_mask(self):
+        #every possible move, true when legal
+        mask = np.zeros(10_000, dtype=bool)
+        for a in self._gen_legal_actions():
+            mask[a] = True
+        return mask
+
+    def action_to_gravon(self, action):
+        #int to string
+        fr, fc, tr, tc = self._parse_action(action)
+        return f"{rc_to_gravon(fr,fc)}-{rc_to_gravon(tr,tc)}"
+
+    def gravon_to_action(self, move_str):
+        #string to int
+        a, b = move_str.lower().split('-')
+        fr, fc = gravon_to_rc(a)
+        tr, tc = gravon_to_rc(b)
+        return rc_to_pos(fr, fc) * 100 + rc_to_pos(tr, tc)
+
+    def render(self, reveal_all = True):
+        R, B, RST = '\033[91m', '\033[94m', '\033[0m'
+        print("\n    a  b  c  d  e  f  g  h  i  j")
+        for r in range(10):
+            print(f"{10-r:2d}  ", end='')
+            for c in range(10):
+                cell = self.board[r, c]
+                if cell == LAKE:
+                    print('~~ ', end='')
+                elif cell == EMPTY:
+                    print(' . ', end='')
+                else:
+                    player = cell_player(cell)
+                    rank   = cell_rank(cell)
+                    sym    = RANK_SYMBOL[rank] if (reveal_all or self.revealed[r, c]) else '?'
+                    color  = R if player == RED else B
+                    print(f"{color}{sym:>2}{RST} ", end='')
+            print()
+        player_str = 'RED' if self.current_player == RED else 'BLUE'
+        print(f"\n  Turn: {player_str}   Move #{self.move_count}")
+
+
+
+    def _observe(self) -> dict:
+        return {
+            'board': self.board.copy(),
+            'revealed': self.revealed.copy(),
+            'current_player': self.current_player,
+            'legal_actions_mask': self.legal_actions_mask(),
+        }
+
+    def _move_piece(self, fr: int, fc: int, tr: int, tc: int):
+        self.board[tr, tc]    = self.board[fr, fc]
+        self.revealed[tr, tc] = self.revealed[fr, fc]
+        self.board[fr, fc]    = EMPTY
+        self.revealed[fr, fc] = False
+
+    def _resolve_combat(self, atk: int, dfn: int) -> str:
+        if dfn == BOMB:
+            return 'attacker_wins' if atk == MINER else 'defender_wins'
+        if dfn == FLAG:
+            return 'attacker_wins'
+        if atk == SPY and dfn == MARSHAL:
+            return 'attacker_wins'
+        if atk > dfn: return 'attacker_wins'
+        if atk < dfn: return 'defender_wins'
+        return 'draw'
+
+    def _gen_legal_actions(self) -> set:
+        actions = set()
+        dirs    = ((-1, 0), (1, 0), (0, -1), (0, 1))
+
+        for r in range(10):
+            for c in range(10):
+                cell = self.board[r, c]
+                if cell_player(cell) != self.current_player:
+                    continue
+
+                rank     = cell_rank(cell)
+                from_pos = rc_to_pos(r, c)
+
+                if rank in (FLAG, BOMB):
+                    continue   # immovable pieces
+
+                if rank == SCOUT:
+                    for dr, dc in dirs:
+                        nr, nc = r + dr, c + dc
+                        while 0 <= nr < 10 and 0 <= nc < 10:
+                            target = self.board[nr, nc]
+                            if target == LAKE:
+                                break
+                            to_pos = rc_to_pos(nr, nc)
+                            if target == EMPTY:
+                                actions.add(from_pos * 100 + to_pos)
+                                nr += dr
+                                nc += dc
+                            else:
+                                if cell_player(target) != self.current_player:
+                                    actions.add(from_pos * 100 + to_pos)
+                                break 
+                else:
+                    for dr, dc in dirs:
+                        nr, nc = r + dr, c + dc
+                        if not (0 <= nr < 10 and 0 <= nc < 10):
+                            continue
+                        target = self.board[nr, nc]
+                        if target == LAKE:
+                            continue
+                        if target == EMPTY or cell_player(target) != self.current_player:
+                            actions.add(from_pos * 100 + rc_to_pos(nr, nc))
+
+        return actions
+
+    def _has_legal_moves(self) -> bool:
+        #game ends in a tie?
+        dirs = ((-1, 0), (1, 0), (0, -1), (0, 1))
+        for r in range(10):
+            for c in range(10):
+                cell = self.board[r, c]
+                if cell_player(cell) != self.current_player:
+                    continue
+                rank = cell_rank(cell)
+                if rank in (FLAG, BOMB):
+                    continue
+                for dr, dc in dirs:
+                    nr, nc = r + dr, c + dc
+                    if not (0 <= nr < 10 and 0 <= nc < 10):
+                        continue
+                    target = self.board[nr, nc]
+                    if target != LAKE and (target == EMPTY or
+                                           cell_player(target) != self.current_player):
+                        return True
+        return False
+
+    def _is_legal(self, fr: int, fc: int, tr: int, tc: int) -> bool:
+        return (rc_to_pos(fr, fc) * 100 + rc_to_pos(tr, tc)) in self._gen_legal_actions()
+
+    def _parse_action(self, action):
+        if isinstance(action, str):
+            a, b   = action.lower().split('-')
+            fr, fc = gravon_to_rc(a)
+            tr, tc = gravon_to_rc(b)
+        elif isinstance(action, int):
+            from_pos, to_pos = action // 100, action % 100
+            fr, fc = pos_to_rc(from_pos)
+            tr, tc = pos_to_rc(to_pos)
+        elif isinstance(action, (tuple, list)):
+            fr, fc, tr, tc = action
+        else:
+            raise ValueError(f"Unsupported action type: {type(action)}")
+        return fr, fc, tr, tc
+
+    def _random_setup(self, player: int) -> dict:
+        rows    = range(6, 10) if player == RED else range(0, 4)
+        squares = [(r, c) for r in rows for c in range(10)]
+        pieces  = [rank for rank, cnt in PIECE_COUNTS.items()
+                   for _ in range(cnt)]
+        np.random.shuffle(pieces)
+        return dict(zip(squares, pieces))
