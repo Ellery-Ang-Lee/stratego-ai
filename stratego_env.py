@@ -2,10 +2,6 @@
 #flag = 1, bomb = 12
 #colum a-j (left - right)
 #row 1-10 (row 1 = red home at bottom, row 10 = blue home at top)
-#action encoding: 
-#  int: from_pos * 100 + to_pos, where pos = row*10 + col (range 0-9999)
-#  tuple: (from_row, from_col, to_row, to_col)
-#  str: gravon move string, e.g. "d3-d4"
 
 import numpy as np
 
@@ -112,3 +108,82 @@ class StrategoEnv:
             return {gravon_to_rc(pos): GRAVON_TO_RANK[rank]
                     for pos, rank in setup}
         return self.reset(parse(red_setup), parse(blue_setup))
+
+    def step(self, action) -> tuple:
+        #from_pos * 100 + to_pos  (pos = row*10 + col)
+        #(from_row, from_col, to_row, to_col)
+        #"d3-d4"
+
+        fr, fc, tr, tc = self._parse_action(action)
+
+        if not self._is_legal(fr, fc, tr, tc):
+            raise ValueError(
+                f"Illegal move: {rc_to_gravon(fr,fc)}-{rc_to_gravon(tr,tc)}"
+            )
+
+        reward = 0.0
+        info   = {'combat': None}
+
+        moving_cell = self.board[fr, fc]
+        target_cell = self.board[tr, tc]
+        moving_rank = cell_rank(moving_cell)
+
+        if target_cell == EMPTY:
+            self._move_piece(fr, fc, tr, tc)
+            self.no_capture_count += 1
+
+        else:
+            self.no_capture_count = 0
+            target_rank = cell_rank(target_cell)
+
+            self.revealed[fr, fc] = True
+            self.revealed[tr, tc] = True
+
+            outcome = self._resolve_combat(moving_rank, target_rank)
+            info['combat'] = {
+                'attacker_rank': moving_rank,
+                'defender_rank': target_rank,
+                'outcome':       outcome,
+            }
+
+            if outcome == 'attacker_wins':
+                self.board[fr, fc]    = EMPTY
+                self.revealed[fr, fc] = False
+                self.board[tr, tc]    = moving_cell   # attacker advances
+                self.revealed[tr, tc] = True
+                if target_rank == FLAG:
+                    self.done   = True
+                    self.winner = self.current_player
+                    reward = 1.0 if self.current_player == RED else -1.0
+
+            elif outcome == 'defender_wins':
+                self.board[fr, fc]    = EMPTY         
+                self.revealed[fr, fc] = False
+
+            else: 
+                self.board[fr, fc]    = EMPTY
+                self.board[tr, tc]    = EMPTY
+                self.revealed[fr, fc] = False
+                self.revealed[tr, tc] = False
+
+        if not self.done:
+            self.current_player  = 1 - self.current_player
+            self.move_count     += 1
+
+            if not self._has_legal_moves():
+                # No legal moves → current player loses
+                self.done   = True
+                self.winner = 1 - self.current_player
+                reward = -1.0 if self.current_player == RED else 1.0
+
+        if not self.done and self.no_capture_count >= DRAW_MOVE_LIMIT:
+            self.done   = True
+            self.winner = None
+            reward      = 0.0
+
+        info.update(
+            move_count=self.move_count,
+            current_player=self.current_player,
+            winner=self.winner,
+        )
+        return self._observe(), reward, self.done, info
