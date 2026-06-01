@@ -48,7 +48,7 @@ DRAW_MOVE_LIMIT = 400
 _COLS = 'abcdefghij'  
 
 
-def encode_piece(player: int, rank: int) -> int:
+def encode_piece(player: int, rank: int):
     #convert from player and rank to cell values
     return rank + 1 if player == RED else -(rank + 1)
 
@@ -64,7 +64,7 @@ def cell_rank(cell: int):
     if -12 <= cell <= -1: return -cell - 1
     return None
 
-def rc_to_pos(r: int, c: int) -> int:
+def rc_to_pos(r: int, c: int):
     #(row, col) to linear position 0-99
     return r * 10 + c
 
@@ -78,10 +78,37 @@ def gravon_to_rc(s: str):
     row = 10 - int(s[1:])
     return row, col
 
-def rc_to_gravon(r: int, c: int) -> str:
+def rc_to_gravon(r: int, c: int):
     #row, col to gravon string
     return f"{_COLS[c]}{10 - r}"
 
 
+class StrategoEnv:
+    def reset(self, red_setup: dict = None, blue_setup: dict = None):
+        #setup mapping (row, col) to rank in a dict. None for random
 
+        self.board = np.zeros((10, 10), dtype=np.int32)
+        self.revealed = np.zeros((10, 10), dtype=bool)
+        self.current_player = RED
+        self.done = False
+        self.winner = None       
+        self.move_count = 0
+        self.no_capture_count = 0
 
+        if red_setup is None: red_setup = self._random_setup(RED)
+        if blue_setup is None: blue_setup = self._random_setup(BLUE)
+
+        for (r, c), rank in red_setup.items():
+            self.board[r, c] = encode_piece(RED,  rank)
+        for (r, c), rank in blue_setup.items():
+            self.board[r, c] = encode_piece(BLUE, rank)
+
+        return self._observe()
+
+    def reset_from_gravon(self, red_setup: list, blue_setup: list) -> dict:
+        #position as a string, rank as a string pairs
+
+        def parse(setup):
+            return {gravon_to_rc(pos): GRAVON_TO_RANK[rank]
+                    for pos, rank in setup}
+        return self.reset(parse(red_setup), parse(blue_setup))
