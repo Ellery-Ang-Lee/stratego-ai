@@ -18,7 +18,7 @@ GRAVON_TO_RANK = {
     "F" : SERGEANT, "R" : SERGEANT, "G" : LIEUTENANT, "S" : LIEUTENANT,
     "H" : CAPTAIN, "T" : CAPTAIN, "I" : MAJOR, "U" : MAJOR,
     "J" : COLONEL, "V" : COLONEL, "K" : GENERAL, "W" : GENERAL,
-    "L" : MARSHAL, "X" : MARSHAL, "F" : FLAG, "Y" : FLAG,
+    "L" : MARSHAL, "X" : MARSHAL, "M" : FLAG, "Y" : FLAG,
     "A" : EMPTY, "_" : LAKE
 }
 
@@ -44,7 +44,7 @@ LAKE_SQUARES = [
 
 DRAW_MOVE_LIMIT = 400
 
-_COLS = 'abcdefghij'  
+_COLS = 'ABCDEFGHIK' #skipping j bc gravon is bad
 
 
 def encode_piece(player: int, rank: int):
@@ -73,12 +73,17 @@ def pos_to_rc(pos: int):
 
 def gravon_to_rc(s: str):
     #gavon string like d3 to row, col
-    col = _COLS.index(s[0].lower())
-    row = 10 - int(s[1:])
+    col = _COLS.index(s[0].upper())
+    if s[1:].isdigit():
+        row = 10 - int(s[1:])
+    else:
+        row = 0
     return row, col
 
 def rc_to_gravon(r: int, c: int):
     #row, col to gravon string
+    if r == 0:
+        return f"{_COLS[c]}:"
     return f"{_COLS[c]}{10 - r}"
 
 
