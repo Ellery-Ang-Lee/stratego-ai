@@ -24,7 +24,7 @@ GRAVON_TO_RANK = {
 }
 
 RANK_SYMBOL = {
-    FLAG:'F', SPY:'s', SCOUT:'2', MINER:'3', SERGEANT:'4',
+    FLAG:'F', SPY:'1', SCOUT:'2', MINER:'3', SERGEANT:'4',
     LIEUTENANT:'5', CAPTAIN:'6', MAJOR:'7', COLONEL:'8',
     GENERAL:'9', MARSHAL:'M', BOMB:'B', 
 }
@@ -46,7 +46,7 @@ _COLS = 'ABCDEFGHIK' #skipping j bc gravon is bad
 
 def encode_piece(player, rank):
     #convert from player and rank to cell values
-    return rank + 1 if player == RED else -(rank + 1)
+    return rank if player == RED else -rank
 
 def cell_player(cell):
     #returns player based on cell
@@ -56,8 +56,8 @@ def cell_player(cell):
 
 def cell_rank(cell):
     #returns rank based on cell
-    if 1 <= cell <= 12:   return cell - 1
-    if -12 <= cell <= -1: return -cell - 1
+    if 1 <= cell <= 12:   return cell 
+    if -12 <= cell <= -1: return -cell
     return None
 
 def rc_to_pos(r, c):
@@ -105,18 +105,10 @@ class StrategoEnv:
             i += 1
         i = 0
         for char in blue_setup:
-            self.board[math.floor(i / 10) + 6,i % 10] = encode_piece(BLUE, GRAVON_TO_RANK[char])
+            self.board[math.floor(i / 10) + 6, i % 10] = encode_piece(BLUE, GRAVON_TO_RANK[char])
             i += 1
 
         return self._observe()
-
-    def reset_from_gravon(self, red_setup: list, blue_setup: list) -> dict:
-        #position as a string, rank as a string pairs
-
-        def parse(setup):
-            return {gravon_to_rc(pos): GRAVON_TO_RANK[rank]
-                    for pos, rank in setup}
-        return self.reset(parse(red_setup), parse(blue_setup))
 
     def step(self, action) -> tuple:
         #from_pos * 100 + to_pos  (pos = row*10 + col)
@@ -270,7 +262,7 @@ class StrategoEnv:
 
     def _gen_legal_actions(self) -> set:
         actions = set()
-        dirs    = ((-1, 0), (1, 0), (0, -1), (0, 1))
+        dirs = ((-1, 0), (1, 0), (0, -1), (0, 1))
 
         for r in range(10):
             for c in range(10):
@@ -278,7 +270,7 @@ class StrategoEnv:
                 if cell_player(cell) != self.current_player:
                     continue
 
-                rank     = cell_rank(cell)
+                rank = cell_rank(cell)
                 from_pos = rc_to_pos(r, c)
 
                 if rank in (FLAG, BOMB):
