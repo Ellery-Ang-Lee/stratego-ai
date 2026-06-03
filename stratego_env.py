@@ -1,9 +1,10 @@
-#board encoding: 1 - 12 and -1 - -12. 0 is empty and 99 is lake. 
+#board reps: 1 - 12 and -1 - -12. 0 is empty and 99 is lake. 
 #flag = 1, bomb = 12
 #colum a-j (left - right)
 #row 1-10 (row 1 = red home at bottom, row 10 = blue home at top)
 
 import numpy as np
+import math
 
 FLAG, SPY, SCOUT, MINER, SERGEANT = 1, 2, 3, 4, 5
 LIEUTENANT, CAPTAIN, MAJOR, COLONEL = 6, 7, 8, 9
@@ -37,41 +38,37 @@ PIECE_COUNTS = {
     GENERAL:1, MARSHAL:1, BOMB:6,
 }
 
-LAKE_SQUARES = [
-    (4, 2), (4, 3), (5, 2), (5, 3),
-    (4, 6), (4, 7), (5, 6), (5, 7),
-]
-
 DRAW_MOVE_LIMIT = 400
 
 _COLS = 'ABCDEFGHIK' #skipping j bc gravon is bad
 
 
-def encode_piece(player: int, rank: int):
+
+def encode_piece(player, rank):
     #convert from player and rank to cell values
     return rank + 1 if player == RED else -(rank + 1)
 
-def cell_player(cell: int):
+def cell_player(cell):
     #returns player based on cell
     if 1 <= cell <= 12:   return RED
     if -12 <= cell <= -1: return BLUE
     return None
 
-def cell_rank(cell: int):
+def cell_rank(cell):
     #returns rank based on cell
     if 1 <= cell <= 12:   return cell - 1
     if -12 <= cell <= -1: return -cell - 1
     return None
 
-def rc_to_pos(r: int, c: int):
+def rc_to_pos(r, c):
     #(row, col) to linear position 0-99
     return r * 10 + c
 
-def pos_to_rc(pos: int):
+def pos_to_rc(pos):
     #linear position to row, col
     return pos // 10, pos % 10
 
-def gravon_to_rc(s: str):
+def gravon_to_rc(s):
     #gavon string like d3 to row, col
     col = _COLS.index(s[0].upper())
     if s[1:].isdigit():
@@ -80,7 +77,7 @@ def gravon_to_rc(s: str):
         row = 0
     return row, col
 
-def rc_to_gravon(r: int, c: int):
+def rc_to_gravon(r, c):
     #row, col to gravon string
     if r == 0:
         return f"{_COLS[c]}:"
@@ -88,7 +85,7 @@ def rc_to_gravon(r: int, c: int):
 
 
 class StrategoEnv:
-    def reset(self, red_setup: dict = None, blue_setup: dict = None):
+    def reset(self, red_setup: str = None, blue_setup: str = None):
         #setup mapping (row, col) to rank in a dict. None for random
 
         self.board = np.zeros((10, 10), dtype=np.int32)
@@ -102,10 +99,14 @@ class StrategoEnv:
         if red_setup is None: red_setup = self._random_setup(RED)
         if blue_setup is None: blue_setup = self._random_setup(BLUE)
 
-        for (r, c), rank in red_setup.items():
-            self.board[r, c] = encode_piece(RED,  rank)
-        for (r, c), rank in blue_setup.items():
-            self.board[r, c] = encode_piece(BLUE, rank)
+        i = 0
+        for char in red_setup:
+            self.board[math.floor(i / 10),i % 10] = encode_piece(RED, GRAVON_TO_RANK[char])
+            i += 1
+        i = 0
+        for char in blue_setup:
+            self.board[math.floor(i / 10) + 6,i % 10] = encode_piece(BLUE, GRAVON_TO_RANK[char])
+            i += 1
 
         return self._observe()
 
@@ -232,9 +233,9 @@ class StrategoEnv:
                     print(' . ', end='')
                 else:
                     player = cell_player(cell)
-                    rank   = cell_rank(cell)
-                    sym    = RANK_SYMBOL[rank] if (reveal_all or self.revealed[r, c]) else '?'
-                    color  = R if player == RED else B
+                    rank = cell_rank(cell)
+                    sym = RANK_SYMBOL[rank.item()] if (reveal_all or self.revealed[r, c]) else '?'
+                    color = R if player == RED else B
                     print(f"{color}{sym:>2}{RST} ", end='')
             print()
         player_str = 'RED' if self.current_player == RED else 'BLUE'
