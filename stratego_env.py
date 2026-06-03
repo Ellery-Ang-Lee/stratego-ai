@@ -5,28 +5,31 @@
 
 import numpy as np
 
-FLAG, SPY, SCOUT, MINER, SERGEANT  = 0, 1, 2, 3, 4
-LIEUTENANT, CAPTAIN, MAJOR, COLONEL = 5, 6, 7, 8
-GENERAL, MARSHAL, BOMB              = 9, 10, 11
-
-RANK_TO_GRAVON = {
-    FLAG:'F',   SPY:'1',  SCOUT:'2',  MINER:'3',   SERGEANT:'4',
-    LIEUTENANT:'5', CAPTAIN:'6', MAJOR:'7', COLONEL:'8',
-    GENERAL:'9', MARSHAL:'10', BOMB:'B',
-}
-GRAVON_TO_RANK = {v: k for k, v in RANK_TO_GRAVON.items()}
-
-RANK_SYMBOL = {
-    FLAG:'F', SPY:'s', SCOUT:'2', MINER:'3', SERGEANT:'4',
-    LIEUTENANT:'5', CAPTAIN:'6', MAJOR:'7', COLONEL:'8',
-    GENERAL:'9', MARSHAL:'M', BOMB:'B',
-}
+FLAG, SPY, SCOUT, MINER, SERGEANT = 1, 2, 3, 4, 5
+LIEUTENANT, CAPTAIN, MAJOR, COLONEL = 6, 7, 8, 9
+GENERAL, MARSHAL, BOMB = 10, 11, 12
 
 EMPTY = 0
 LAKE  = 99
 
-RED  = 0   # Gravon rows 1-4   (0-indexed rows 6-9)
-BLUE = 1   # Gravon rows 7-10  (0-indexed rows 0-3)
+GRAVON_TO_RANK = {
+    "B" : BOMB, "N" : BOMB, "C" : SPY, "O" : SPY,
+    "D" : SCOUT, "P" : SCOUT, "E" : MINER, "Q" : MINER,
+    "F" : SERGEANT, "R" : SERGEANT, "G" : LIEUTENANT, "S" : LIEUTENANT,
+    "H" : CAPTAIN, "T" : CAPTAIN, "I" : MAJOR, "U" : MAJOR,
+    "J" : COLONEL, "V" : COLONEL, "K" : GENERAL, "W" : GENERAL,
+    "L" : MARSHAL, "X" : MARSHAL, "F" : FLAG, "Y" : FLAG,
+    "A" : EMPTY, "_" : LAKE
+}
+
+RANK_SYMBOL = {
+    FLAG:'F', SPY:'s', SCOUT:'2', MINER:'3', SERGEANT:'4',
+    LIEUTENANT:'5', CAPTAIN:'6', MAJOR:'7', COLONEL:'8',
+    GENERAL:'9', MARSHAL:'M', BOMB:'B', 
+}
+
+RED  = 0   # Gravon rows 1-4 (0-indexed rows 6-9)
+BLUE = 1   # Gravon rows 7-10 (0-indexed rows 0-3)
 
 PIECE_COUNTS = {
     FLAG:1, SPY:1, SCOUT:8, MINER:5, SERGEANT:4,
