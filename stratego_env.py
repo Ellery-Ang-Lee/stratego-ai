@@ -98,14 +98,14 @@ class StrategoEnv:
 
         if red_setup is None: red_setup = self._random_setup(RED)
         if blue_setup is None: blue_setup = self._random_setup(BLUE)
-
+            
         i = 0
         for char in red_setup:
-            self.board[math.floor(i / 10),i % 10] = encode_piece(RED, GRAVON_TO_RANK[char])
+            self.board[math.floor(i / 10),i % 10] = encode_piece(BLUE, GRAVON_TO_RANK[char])
             i += 1
         i = 0
         for char in blue_setup:
-            self.board[math.floor(i / 10) + 6, i % 10] = encode_piece(BLUE, GRAVON_TO_RANK[char])
+            self.board[math.floor(i / 10) + 6, i % 10] = encode_piece(RED, GRAVON_TO_RANK[char])
             i += 1
 
         return self._observe()
@@ -219,7 +219,7 @@ class StrategoEnv:
             print(f"{10-r:2d}  ", end='')
             for c in range(10):
                 cell = self.board[r, c]
-                if cell == LAKE:
+                if cell == LAKE or cell == -LAKE:
                     print('~~ ', end='')
                 elif cell == EMPTY:
                     print(' . ', end='')
