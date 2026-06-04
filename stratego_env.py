@@ -3,6 +3,11 @@
 #colum a-j (left - right)
 #row 1-10 (row 1 = red home at bottom, row 10 = blue home at top)
 
+#probability engine:
+# - moved? Bomb, Flag
+# - moved more than one? Scout
+# - change probabilities based on number of pieces remaining? or AI can do that, not sure
+
 import numpy as np
 import math
 
