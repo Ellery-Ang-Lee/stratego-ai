@@ -95,6 +95,7 @@ class StrategoEnv:
 
         self.board = np.zeros((10, 10), dtype=np.int32)
         self.revealed = np.zeros((10, 10), dtype=bool)
+        self.moved = np.zeros((10, 10), dtype=bool)
         self.current_player = RED
         self.done = False
         self.winner = None       
@@ -134,6 +135,8 @@ class StrategoEnv:
         target_cell = self.board[tr, tc]
         moving_rank = cell_rank(moving_cell)
 
+        self.moved[fr, fc] = True
+
         if target_cell == EMPTY:
             self._move_piece(fr, fc, tr, tc)
             self.no_capture_count += 1
@@ -153,10 +156,11 @@ class StrategoEnv:
             }
 
             if outcome == 'attacker_wins':
-                self.board[fr, fc]    = EMPTY
+                self.board[fr, fc] = EMPTY
                 self.revealed[fr, fc] = False
-                self.board[tr, tc]    = moving_cell   # attacker advances
+                self.board[tr, tc] = moving_cell   # attacker advances
                 self.revealed[tr, tc] = True
+                self.moved[tr, tc] = True
                 if target_rank == FLAG:
                     self.done   = True
                     self.winner = self.current_player
@@ -231,7 +235,8 @@ class StrategoEnv:
                 else:
                     player = cell_player(cell)
                     rank = cell_rank(cell)
-                    sym = RANK_SYMBOL[rank.item()] if (reveal_all or self.revealed[r, c]) else '?'
+                    #sym = RANK_SYMBOL[rank.item()] if (reveal_all or self.revealed[r, c]) else '?'
+                    sym = "T" if self.moved[r, c] else "F"
                     color = R if player == RED else B
                     print(f"{color}{sym:>2}{RST} ", end='')
             print()
@@ -249,9 +254,10 @@ class StrategoEnv:
         }
 
     def _move_piece(self, fr: int, fc: int, tr: int, tc: int):
-        self.board[tr, tc]    = self.board[fr, fc]
+        self.board[tr, tc]  = self.board[fr, fc]
         self.revealed[tr, tc] = self.revealed[fr, fc]
-        self.board[fr, fc]    = EMPTY
+        self.moved[tr, tc] = self.moved[fr, fc]
+        self.board[fr, fc]  = EMPTY
         self.revealed[fr, fc] = False
 
     def _resolve_combat(self, atk: int, dfn: int) -> str:
