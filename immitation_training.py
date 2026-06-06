@@ -1,6 +1,7 @@
 import stratego_env
 import xml.etree.ElementTree as ET
 import time
+import probability_engine
 
 #board needs to be mirrored up down (probably a problem with the environment)
 
@@ -22,12 +23,10 @@ def main():
         #setup = game.find('field').get("content")
     
         env.reset(red_setup=setup[:60], blue_setup=setup[60:])
-        print(env.board)
         env.render(True)
         for move in game.findall('move'):
             env.step(move.get("source") + "-" + move.get("target"))
             env.render(True)
-            time.sleep(0.5)
 
 
 main()

@@ -10,6 +10,7 @@
 
 import numpy as np
 import math
+import copy
 
 FLAG, SPY, SCOUT, MINER, SERGEANT = 1, 2, 3, 4, 5
 LIEUTENANT, CAPTAIN, MAJOR, COLONEL = 6, 7, 8, 9
@@ -31,7 +32,7 @@ GRAVON_TO_RANK = {
 RANK_SYMBOL = {
     FLAG:'F', SPY:'1', SCOUT:'2', MINER:'3', SERGEANT:'4',
     LIEUTENANT:'5', CAPTAIN:'6', MAJOR:'7', COLONEL:'8',
-    GENERAL:'9', MARSHAL:'M', BOMB:'B', 
+    GENERAL:'9', MARSHAL:'M', BOMB:'B', EMPTY:'.', LAKE:'~',
 }
 
 RED  = 0   # Gravon rows 1-4 (0-indexed rows 6-9)
@@ -47,22 +48,24 @@ DRAW_MOVE_LIMIT = 400
 
 _COLS = 'ABCDEFGHIK' #skipping j bc gravon is bad
 
-
+next_id = 0
 
 def encode_piece(player, rank):
     #convert from player and rank to cell values
-    return rank if player == RED else -rank
+    return piece(player, rank if player == RED else -rank)
 
 def cell_player(cell):
     #returns player based on cell
-    if 1 <= cell <= 12:   return RED
-    if -12 <= cell <= -1: return BLUE
+    if 1 <= cell.rank <= 12:   return RED
+    if -12 <= cell.rank <= -1: return BLUE
     return None
 
 def cell_rank(cell):
     #returns rank based on cell
-    if 1 <= cell <= 12:   return cell 
-    if -12 <= cell <= -1: return -cell
+    if 1 <= cell.rank <= 12:   return cell.rank
+    if -12 <= cell.rank <= -1: return -cell.rank
+    if cell.rank == 0: return EMPTY
+    if cell.rank == 99 or cell.rank == -99: return LAKE
     return None
 
 def rc_to_pos(r, c):
@@ -93,17 +96,17 @@ class StrategoEnv:
     def reset(self, red_setup: str = None, blue_setup: str = None):
         #setup mapping (row, col) to rank in a dict. None for random
 
-        self.board = np.zeros((10, 10), dtype=np.int32)
-        self.revealed = np.zeros((10, 10), dtype=bool)
-        self.moved = np.zeros((10, 10), dtype=bool)
+        self.board = np.zeros((10, 10), dtype=piece)
+        #self.revealed = np.zeros((10, 10), dtype=bool)
+        #self.moved = np.zeros((10, 10), dtype=bool)
         self.current_player = RED
         self.done = False
         self.winner = None       
         self.move_count = 0
         self.no_capture_count = 0
 
-        if red_setup is None: red_setup = self._random_setup(RED)
-        if blue_setup is None: blue_setup = self._random_setup(BLUE)
+        #if red_setup is None: red_setup = self._random_setup(RED)
+        #if blue_setup is None: blue_setup = self._random_setup(BLUE)
             
         i = 0
         for char in red_setup:
@@ -129,15 +132,15 @@ class StrategoEnv:
             )
 
         reward = 0.0
-        info   = {'combat': None}
+        info = {'combat': None}
 
         moving_cell = self.board[fr, fc]
         target_cell = self.board[tr, tc]
         moving_rank = cell_rank(moving_cell)
 
-        self.moved[fr, fc] = True
+        self.board[fr, fc].moved = True
 
-        if target_cell == EMPTY:
+        if target_cell.rank == EMPTY:
             self._move_piece(fr, fc, tr, tc)
             self.no_capture_count += 1
 
@@ -145,37 +148,30 @@ class StrategoEnv:
             self.no_capture_count = 0
             target_rank = cell_rank(target_cell)
 
-            self.revealed[fr, fc] = True
-            self.revealed[tr, tc] = True
+            self.board[fr, fc].revealed = True
+            self.board[tr, tc].revealed = True
 
             outcome = self._resolve_combat(moving_rank, target_rank)
             info['combat'] = {
                 'attacker_rank': moving_rank,
                 'defender_rank': target_rank,
-                'outcome':       outcome,
+                'outcome': outcome,
             }
 
             if outcome == 'attacker_wins':
-                self.board[fr, fc] = EMPTY
-                self.revealed[fr, fc] = False
-                self.board[tr, tc] = moving_cell   # attacker advances
-                self.revealed[tr, tc] = True
-                self.moved[tr, tc] = True
+                self.board[tr, tc] = copy.copy(moving_cell) 
+                moving_cell.rank = EMPTY
                 if target_rank == FLAG:
                     self.done   = True
                     self.winner = self.current_player
                     reward = 1.0 if self.current_player == RED else -1.0
 
             elif outcome == 'defender_wins':
-                self.board[fr, fc]    = EMPTY         
-                self.revealed[fr, fc] = False
+                self.board[fr, fc].rank = EMPTY         
 
             else: 
-                self.board[fr, fc]    = EMPTY
-                self.board[tr, tc]    = EMPTY
-                self.revealed[fr, fc] = False
-                self.revealed[tr, tc] = False
-
+                self.board[fr, fc].rank = EMPTY
+                self.board[tr, tc].rank = EMPTY
         if not self.done:
             self.current_player  = 1 - self.current_player
             self.move_count     += 1
@@ -189,7 +185,7 @@ class StrategoEnv:
         if not self.done and self.no_capture_count >= DRAW_MOVE_LIMIT:
             self.done   = True
             self.winner = None
-            reward      = 0.0
+            reward = 0.0
 
         info.update(
             move_count=self.move_count,
@@ -235,8 +231,8 @@ class StrategoEnv:
                 else:
                     player = cell_player(cell)
                     rank = cell_rank(cell)
-                    #sym = RANK_SYMBOL[rank.item()] if (reveal_all or self.revealed[r, c]) else '?'
-                    sym = "T" if self.moved[r, c] else "F"
+                    sym = RANK_SYMBOL[rank] if (reveal_all or self.board[r, c].revealed) else '?'
+                    #sym = "T" if self.board[r, c].moved else "F"
                     color = R if player == RED else B
                     print(f"{color}{sym:>2}{RST} ", end='')
             print()
@@ -248,17 +244,13 @@ class StrategoEnv:
     def _observe(self) -> dict:
         return {
             'board': self.board.copy(),
-            'revealed': self.revealed.copy(),
             'current_player': self.current_player,
             'legal_actions_mask': self.legal_actions_mask(),
         }
 
     def _move_piece(self, fr: int, fc: int, tr: int, tc: int):
-        self.board[tr, tc]  = self.board[fr, fc]
-        self.revealed[tr, tc] = self.revealed[fr, fc]
-        self.moved[tr, tc] = self.moved[fr, fc]
-        self.board[fr, fc]  = EMPTY
-        self.revealed[fr, fc] = False
+        self.board[tr, tc] = copy.copy(self.board[fr, fc])
+        self.board[fr, fc].rank = EMPTY
 
     def _resolve_combat(self, atk: int, dfn: int) -> str:
         if dfn == BOMB:
@@ -286,16 +278,16 @@ class StrategoEnv:
 
                 if rank in (FLAG, BOMB):
                     continue   # immovable pieces
-
+                
                 if rank == SCOUT:
                     for dr, dc in dirs:
                         nr, nc = r + dr, c + dc
                         while 0 <= nr < 10 and 0 <= nc < 10:
                             target = self.board[nr, nc]
-                            if target == LAKE:
+                            if target.rank == LAKE:
                                 break
                             to_pos = rc_to_pos(nr, nc)
-                            if target == EMPTY:
+                            if target.rank == EMPTY:
                                 actions.add(from_pos * 100 + to_pos)
                                 nr += dr
                                 nc += dc
@@ -309,9 +301,9 @@ class StrategoEnv:
                         if not (0 <= nr < 10 and 0 <= nc < 10):
                             continue
                         target = self.board[nr, nc]
-                        if target == LAKE:
+                        if target.rank == LAKE:
                             continue
-                        if target == EMPTY or cell_player(target) != self.current_player:
+                        if target.rank == EMPTY or cell_player(target) != self.current_player:
                             actions.add(from_pos * 100 + rc_to_pos(nr, nc))
 
         return actions
@@ -354,11 +346,13 @@ class StrategoEnv:
         else:
             raise ValueError(f"Unsupported action type: {type(action)}")
         return fr, fc, tr, tc
-
-    def _random_setup(self, player: int) -> dict:
-        rows    = range(6, 10) if player == RED else range(0, 4)
-        squares = [(r, c) for r in rows for c in range(10)]
-        pieces  = [rank for rank, cnt in PIECE_COUNTS.items()
-                   for _ in range(cnt)]
-        np.random.shuffle(pieces)
-        return dict(zip(squares, pieces))
+    
+class piece:
+    def __init__(self, player, rank, moved=False, revealed=False):
+        global next_id
+        self.id = next_id
+        next_id += 1
+        self.player = player
+        self.rank = rank
+        self.moved = moved
+        self.revealed = revealed
