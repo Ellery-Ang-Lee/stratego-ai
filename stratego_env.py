@@ -231,8 +231,8 @@ class StrategoEnv:
                 else:
                     player = cell_player(cell)
                     rank = cell_rank(cell)
-                    sym = RANK_SYMBOL[rank] if (reveal_all or self.board[r, c].revealed) else '?'
-                    #sym = "T" if self.board[r, c].moved else "F"
+                    #sym = RANK_SYMBOL[rank] if (reveal_all or self.board[r, c].revealed) else '?'
+                    sym = "T" if self.board[r, c].moved else "F"
                     color = R if player == RED else B
                     print(f"{color}{sym:>2}{RST} ", end='')
             print()

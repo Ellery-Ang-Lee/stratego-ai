@@ -1,6 +1,6 @@
-import torch
+#import torch
 
-def step():
+def step(obs, reward, done, info):
     pass
 
 def generate_input():

@@ -23,10 +23,10 @@ def main():
         #setup = game.find('field').get("content")
     
         env.reset(red_setup=setup[:60], blue_setup=setup[60:])
-        env.render(True)
+        env.render(False)
         for move in game.findall('move'):
-            env.step(move.get("source") + "-" + move.get("target"))
-            env.render(True)
+            probability_engine.step(env.step(move.get("source") + "-" + move.get("target")))
+            env.render(False)
 
 
 main()
