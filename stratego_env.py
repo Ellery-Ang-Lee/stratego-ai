@@ -132,13 +132,20 @@ class StrategoEnv:
             )
 
         reward = 0.0
-        info = {'combat': None}
+        info = {'combat': None, 'ids': None}
+
+        info['ids'] = {
+            'moving_piece_id': self.board[fr, fc].id,
+            'target_piece_id': self.board[tr, tc].id if self.board[tr, tc].rank != EMPTY else None,
+        }
 
         moving_cell = self.board[fr, fc]
         target_cell = self.board[tr, tc]
         moving_rank = cell_rank(moving_cell)
 
         self.board[fr, fc].moved = True
+
+
 
         if target_cell.rank == EMPTY:
             self._move_piece(fr, fc, tr, tc)
@@ -192,7 +199,7 @@ class StrategoEnv:
             current_player=self.current_player,
             winner=self.winner,
         )
-        return self._observe(), reward, self.done, info
+        return (self._observe() | {'reward': reward, 'done': self.done, 'info': info})
 
     def legal_actions(self):
         #legal actions as integers 
@@ -228,11 +235,13 @@ class StrategoEnv:
                     print('~~ ', end='')
                 elif cell == EMPTY:
                     print(' . ', end='')
+                    print(cell.id)
                 else:
                     player = cell_player(cell)
                     rank = cell_rank(cell)
                     #sym = RANK_SYMBOL[rank] if (reveal_all or self.board[r, c].revealed) else '?'
-                    sym = "T" if self.board[r, c].moved else "F"
+                    #sym = "T" if self.board[r, c].moved else "F"
+                    sym = self.board[r,c].id
                     color = R if player == RED else B
                     print(f"{color}{sym:>2}{RST} ", end='')
             print()
