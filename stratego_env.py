@@ -108,6 +108,8 @@ class StrategoEnv:
         self.move_count = 0
         self.no_capture_count = 0
 
+        next_id = 0
+
         #if red_setup is None: red_setup = self._random_setup(RED)
         #if blue_setup is None: blue_setup = self._random_setup(BLUE)
             
@@ -122,11 +124,7 @@ class StrategoEnv:
 
         return self._observe()
 
-    def step(self, action) -> tuple:
-        #from_pos * 100 + to_pos  (pos = row*10 + col)
-        #(from_row, from_col, to_row, to_col)
-        #"d3-d4"
-
+    def step(self, action) -> dict:
         fr, fc, tr, tc = self._parse_action(action)
 
         if not self._is_legal(fr, fc, tr, tc):
@@ -134,79 +132,80 @@ class StrategoEnv:
                 f"Illegal move: {rc_to_gravon(fr,fc)}-{rc_to_gravon(tr,tc)}"
             )
 
+        from_piece = copy.copy(self.board[fr, fc])
+        to_piece = copy.copy(self.board[tr, tc]) if self.board[tr, tc].rank != EMPTY else None
+
+        was_moved = self.board[fr, fc].moved
+        was_revealed_from = self.board[fr, fc].revealed
+        was_revealed_to = self.board[tr, tc].revealed if to_piece is not None else False
+
+        move_distance = abs(tr - fr) + abs(tc - fc)
+
         reward = 0.0
-        info = {'combat': None, 'ids': None, "from_rc": False, "to_rc": False}
-
-        info['ids'] = {
-            'moving_piece_id': self.board[fr, fc].id,
-            'target_piece_id': self.board[tr, tc].id if self.board[tr, tc].rank != EMPTY else None,
-        }
-
-        moving_cell = self.board[fr, fc]
-        target_cell = self.board[tr, tc]
-        moving_rank = cell_rank(moving_cell)
+        combat_outcome = None
 
         self.board[fr, fc].moved = True
 
-
-
-        if target_cell.rank == EMPTY:
+        if to_piece is None:  # quiet move
             self._move_piece(fr, fc, tr, tc)
             self.no_capture_count += 1
 
-        else:
+        else: 
             self.no_capture_count = 0
-            target_rank = cell_rank(target_cell)
+            moving_rank = cell_rank(self.board[fr, fc])
+            target_rank = cell_rank(self.board[tr, tc])
 
-            if not self.board[fr, fc].revealed:
-                info["from_rc"] = True
-            if not self.board[tr, tc].revealed:
-                info["to_rc"] = True
             self.board[fr, fc].revealed = True
             self.board[tr, tc].revealed = True
 
-            outcome = self._resolve_combat(moving_rank, target_rank)
-            info['combat'] = {
-                'attacker_rank': moving_rank,
-                'defender_rank': target_rank,
-                'outcome': outcome,
-            }
+            combat_outcome = self._resolve_combat(moving_rank, target_rank)
 
-            if outcome == 'attacker_wins':
-                self.board[tr, tc] = copy.copy(moving_cell) 
-                moving_cell.rank = EMPTY
+            if combat_outcome == 'attacker_wins':
+                self.board[tr, tc] = copy.copy(self.board[fr, fc])
+                self.board[fr, fc].rank = EMPTY
                 if target_rank == FLAG:
                     self.done   = True
                     self.winner = self.current_player
                     reward = 1.0 if self.current_player == RED else -1.0
 
-            elif outcome == 'defender_wins':
-                self.board[fr, fc].rank = EMPTY         
+            elif combat_outcome == 'defender_wins':
+                self.board[fr, fc].rank = EMPTY
 
-            else: 
+            else:  # draw
                 self.board[fr, fc].rank = EMPTY
                 self.board[tr, tc].rank = EMPTY
+
         if not self.done:
-            self.current_player  = 1 - self.current_player
-            self.move_count     += 1
+            self.current_player = 1 - self.current_player
+            self.move_count    += 1
 
             if not self._has_legal_moves():
-                # No legal moves → current player loses
                 self.done   = True
                 self.winner = 1 - self.current_player
                 reward = -1.0 if self.current_player == RED else 1.0
 
         if not self.done and self.no_capture_count >= DRAW_MOVE_LIMIT:
-            self.done   = True
+            self.done = True
             self.winner = None
             reward = 0.0
 
-        info.update(
-            move_count=self.move_count,
-            current_player=self.current_player,
-            winner=self.winner,
-        )
-        return (self._observe() | {'reward': reward, 'done': self.done, 'info': info})
+        return {
+            **self._observe(),
+            'from_piece': from_piece,
+            'to_piece': to_piece,
+            'from_rc': (fr, fc),
+            'to_rc': (tr, tc),
+            'move_distance': move_distance,
+            'newly_moved_from': not was_moved,
+            'newly_revealed_from': not was_revealed_from and combat_outcome is not None,
+            'newly_revealed_to': not was_revealed_to   and combat_outcome is not None,
+            'combat_outcome': combat_outcome,
+            'reward': reward,
+            'done': self.done,
+            'winner': self.winner,
+            'move_count': self.move_count,
+            'current_player': self.current_player,
+        }
 
     def legal_actions(self):
         #legal actions as integers 
@@ -246,9 +245,9 @@ class StrategoEnv:
                 else:
                     player = cell_player(cell)
                     rank = cell_rank(cell)
-                    #sym = RANK_SYMBOL[rank] if (reveal_all or self.board[r, c].revealed) else '?'
+                    sym = RANK_SYMBOL[rank] if (reveal_all or self.board[r, c].revealed) else '?'
                     #sym = "T" if self.board[r, c].moved else "F"
-                    sym = self.board[r,c].id
+                    #sym = self.board[r,c].id
                     color = R if player == RED else B
                     print(f"{color}{sym:>2}{RST} ", end='')
             print()
@@ -267,6 +266,7 @@ class StrategoEnv:
     def _move_piece(self, fr: int, fc: int, tr: int, tc: int):
         self.board[tr, tc] = copy.copy(self.board[fr, fc])
         self.board[fr, fc].rank = EMPTY
+        self.board[fr, fc].id = -1
 
     def _resolve_combat(self, atk: int, dfn: int) -> str:
         if dfn == BOMB:
@@ -372,3 +372,6 @@ class piece:
         self.rank = rank
         self.moved = moved
         self.revealed = revealed
+
+        if self.id == 61:
+            print("SIXTY ONE: " + str(self.player))

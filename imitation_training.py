@@ -29,6 +29,8 @@ def main():
             probability_engine.step(env.step(move.get("source") + "-" + move.get("target")))
             env.render(True)
             time.sleep(5)
+            print(probability_engine.piece_beliefs)
+            time.sleep(10)
 
 
 main()
