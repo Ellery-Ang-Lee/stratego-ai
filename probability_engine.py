@@ -91,9 +91,6 @@ def _register_piece(piece):
 def step(obs):
     global piece_ids
 
-    print(blue_piece_counts)
-    print(red_piece_counts)
-
     from_piece = obs['from_piece']
     to_piece = obs['to_piece']
     combat_outcome = obs['combat_outcome']
@@ -165,4 +162,26 @@ def step(obs):
 
 
 def generate_input():
-    pass
+    result = []
+    K = len(next(iter(piece_beliefs.values())))
+    for h in piece_ids:
+        lookup = np.zeros((max(piece_beliefs) + 1, K))
+
+        for key, value in piece_beliefs.items():
+            if key == -1:
+                continue
+            lookup[key] = value
+
+        ids = np.array(h).reshape(10, 10)
+
+        result.append(lookup[ids].transpose(2,0,1))
+    
+    result = np.stack(result)
+    
+    print(np.shape(result)) #(8, 10, 10, 13)
+    print(result)
+
+    return result
+    
+    
+    # H * 25 * 10 * 10

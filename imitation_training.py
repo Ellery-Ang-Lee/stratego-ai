@@ -28,9 +28,9 @@ def main():
         for move in game.findall('move'):
             probability_engine.step(env.step(move.get("source") + "-" + move.get("target")))
             env.render(True)
-            time.sleep(5)
-            print(probability_engine.piece_beliefs)
-            time.sleep(10)
+            time.sleep(2.5)
+            probability_engine.generate_input()
+            time.sleep(2.5)
 
 
 main()
