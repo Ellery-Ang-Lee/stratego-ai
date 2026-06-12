@@ -6,9 +6,9 @@ import probability_engine
 #board needs to be mirrored up down (probably a problem with the environment)
 
 def main():
-    tree = ET.parse('data/strados2015-2/classic-2015.2-2341.xml')
+    #tree = ET.parse('data/strados2015-2/classic-2015.2-2341.xml')
     #tree = ET.parse('data/strados2005-4/classic-2005.4-568.xml')
-    #tree = ET.parse('data/strados2005-5/classic-2005.5-5771.xml')
+    tree = ET.parse('data/strados2005-5/classic-2005.5-5771.xml')
 
     root = tree.getroot()
     
@@ -28,9 +28,9 @@ def main():
         for move in game.findall('move'):
             probability_engine.step(env.step(move.get("source") + "-" + move.get("target")))
             env.render(True)
-            time.sleep(1)
+            #time.sleep(1)
             probability_engine.generate_input()
-            time.sleep(1)
+            #time.sleep(1)
             #break
 
 

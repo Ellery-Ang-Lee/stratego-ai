@@ -1,8 +1,7 @@
 import numpy as np
 import stratego_env
 
-DEAD = 0
-BELIEF_LEN = 13 #[dead, FLAG, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, bomb]
+BELIEF_LEN = 12 # [FLAG, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, BOMB]
 H = 8  #history
 
 piece_beliefs = {}  #each piece id has a array of beliefs
@@ -18,7 +17,7 @@ def unknown_prior(counts):
     vec = np.zeros(BELIEF_LEN, dtype=float)
     total = sum(counts.values())
     for rank, count in counts.items():
-        vec[rank] = count / total
+        vec[rank - 1] = count / total
     return vec
 
 def renormalize(vec):
@@ -32,7 +31,7 @@ def dead_encoding():
 
 def one_hot(rank):
     vec = np.zeros(BELIEF_LEN, dtype=float)
-    vec[rank] = 1.0
+    vec[rank - 1] = 1.0
     return vec
 
 
@@ -63,7 +62,7 @@ def _propagate_eliminations(player):
         new_vec = vec.copy()
         total = sum(list(counts.values())) 
         for rank, count in counts.items():
-            new_vec[rank] = count/total 
+            new_vec[rank - 1] = count/total 
 
         piece_beliefs[pid] = renormalize(new_vec)
 
@@ -109,8 +108,8 @@ def step(obs):
     #move = not flag or bomb
     if obs['newly_moved_from']:
         vec = piece_beliefs[from_pid].copy()
-        vec[stratego_env.FLAG] = 0.0
-        vec[stratego_env.BOMB] = 0.0
+        vec[stratego_env.FLAG - 1] = 0.0
+        vec[stratego_env.BOMB - 1] = 0.0
         piece_beliefs[from_pid] = renormalize(vec)
 
     #move_distance > 1 = scout
@@ -178,10 +177,8 @@ def generate_input():
     
     result = np.stack(result)
     
-    print(np.shape(result)) #(8, 10, 10, 13)
-    print(result)
+    #print(np.shape(result)) #8, 12, 10, 10
+    #print(result[0][1])
 
     return result
     
-    
-    # H * 25 * 10 * 10
