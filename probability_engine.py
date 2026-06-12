@@ -57,13 +57,13 @@ def _propagate_eliminations(player):
             continue
         if _piece_player.get(pid) != player:
             continue
-        # Skip pieces we're certain about (one-hot)
         if vec.max() == 1.0:
             continue
 
         new_vec = vec.copy()
+        total = sum(list(counts.values())) 
         for rank, count in counts.items():
-            new_vec[rank] *= count  # scale by remaining pool
+            new_vec[rank] = count/total 
 
         piece_beliefs[pid] = renormalize(new_vec)
 
@@ -78,7 +78,7 @@ def _register_piece(piece):
     pid = piece.id
     if pid in piece_beliefs:
         return
-
+    
     _piece_player[pid] = player
     counts = counts_for(player)
 

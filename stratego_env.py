@@ -108,6 +108,7 @@ class StrategoEnv:
         self.move_count = 0
         self.no_capture_count = 0
 
+        global next_id
         next_id = 0
 
         #if red_setup is None: red_setup = self._random_setup(RED)
