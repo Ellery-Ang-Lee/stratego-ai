@@ -46,7 +46,7 @@ def initialize():
 
 
 def counts_for(player):
-    return red_piece_counts if player == stratego_env.RED else blue_piece_counts
+    return blue_piece_counts if player == stratego_env.RED else red_piece_counts #flipped because gravon
 
 
 def _propagate_eliminations(player):
