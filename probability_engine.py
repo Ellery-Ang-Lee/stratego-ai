@@ -6,6 +6,20 @@ H = 8  #history
 
 piece_beliefs = {}  #each piece id has a array of beliefs
 
+empty = np.zeros((10,10))
+lakes = [
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 0, 1, 1, 0, 0, 1, 1, 0, 0], 
+  [0, 0, 1, 1, 0, 0, 1, 1, 0, 0], 
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  
+]
+
 # piece_ids[H-1] is the most recent board
 piece_ids = [[-1] * 100 for _ in range(H)]
 
@@ -88,7 +102,7 @@ def _register_piece(piece):
 
 
 def step(obs):
-    global piece_ids
+    global piece_ids, empty
 
     from_piece = obs['from_piece']
     to_piece = obs['to_piece']
@@ -96,11 +110,15 @@ def step(obs):
 
     _register_piece(obs['from_piece'])
 
+    empty = np.zeros((10,10))
+
     # Register new stuff
     board = obs['board']
     for r in range(10):
         for c in range(10):
             _register_piece(board[r, c])
+            if board[r,c].rank == 0:
+                empty[r,c] = 1
 
     from_pid = from_piece.id
     from_player = stratego_env.cell_player(from_piece)
@@ -160,25 +178,42 @@ def step(obs):
     piece_ids.append(snapshot)
 
 
-def generate_input():
+def generate_input(color):
     result = []
     K = len(next(iter(piece_beliefs.values())))
     for h in piece_ids:
-        lookup = np.zeros((max(piece_beliefs) + 1, K))
+        #lookup = np.zeros((max(piece_beliefs) + 1, K))
+        red_lookup = np.zeros((max(piece_beliefs) + 1, K))
+        blue_lookup = np.zeros((max(piece_beliefs) + 1, K))
 
         for key, value in piece_beliefs.items():
             if key == -1:
                 continue
-            lookup[key] = value
+            if key > 50:
+                red_lookup[key] = value
+                blue_lookup[key] = 0
+            else:
+                red_lookup[key] = 0
+                blue_lookup[key] = value
 
+            #lookup[key] = value
+
+        #ids = np.append(np.array(h),np.array(h)).reshape(2, 10, 10)
         ids = np.array(h).reshape(10, 10)
 
-        result.append(lookup[ids].transpose(2,0,1))
+        x = red_lookup[ids].transpose(2,0,1)
+        x = np.append(x, blue_lookup[ids].transpose(2,0,1)).reshape(24, 10, 10)
+
+        x = np.concatenate((x, np.expand_dims(empty, 0)),0)
+        x = np.concatenate((x, np.expand_dims(lakes, 0)),0)
+
+        result.append(x)
     
     result = np.stack(result)
     
-    #print(np.shape(result)) #8, 12, 10, 10
-    #print(result[0][1])
+    #print(np.shape(result))      #(8, 26, 10, 10)
+    #print(empty)
+    #print(result[0][12 + 3])     #(0-11 is red) (12 - 24 is blue)
 
     return result
     

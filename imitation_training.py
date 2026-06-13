@@ -7,8 +7,8 @@ import probability_engine
 
 def main():
     #tree = ET.parse('data/strados2015-2/classic-2015.2-2341.xml')
-    #tree = ET.parse('data/strados2005-4/classic-2005.4-568.xml')
-    tree = ET.parse('data/strados2005-5/classic-2005.5-5771.xml')
+    tree = ET.parse('data/strados2005-4/classic-2005.4-568.xml')
+    #tree = ET.parse('data/strados2005-5/classic-2005.5-5771.xml')
 
     root = tree.getroot()
     
@@ -25,13 +25,13 @@ def main():
         env.reset(red_setup=setup[:60], blue_setup=setup[60:])
         env.render(True)
         probability_engine.initialize()
+        
         for move in game.findall('move'):
             probability_engine.step(env.step(move.get("source") + "-" + move.get("target")))
             env.render(True)
+            probability_engine.generate_input(0) #0 is red
             #time.sleep(1)
-            probability_engine.generate_input()
-            #time.sleep(1)
-            #break
+            #time.sleep(5)
 
 
 main()

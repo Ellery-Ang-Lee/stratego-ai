@@ -5,9 +5,15 @@ import torch.nn.functional as F
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
+        self.backbone = Backbone()
+        self.policy = Policy()
+        self.value = Value()
     
     def forward(self, x):
-        pass
+        x = self.backbone(x)
+        p = self.policy(x)
+        v = self.value(x)
+        return (p, v)
 
 class Policy(nn.Module):
     def __init__(self): #input is batch, 256, 10, 10
