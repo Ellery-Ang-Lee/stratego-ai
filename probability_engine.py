@@ -50,12 +50,13 @@ def one_hot(rank):
 
 
 def initialize():
-    global piece_beliefs, piece_ids, red_piece_counts, blue_piece_counts
+    global piece_beliefs, piece_ids, red_piece_counts, blue_piece_counts, _piece_rank
 
     piece_beliefs = {}
     piece_ids = [[-1] * 100 for _ in range(H)]
     red_piece_counts  = dict(_INITIAL_COUNTS)
     blue_piece_counts = dict(_INITIAL_COUNTS)
+    _piece_rank = {}
 
 
 def counts_for(player):
@@ -81,6 +82,7 @@ def _propagate_eliminations(player):
         piece_beliefs[pid] = renormalize(new_vec)
 
 _piece_player = {}
+_piece_rank = {}
 
 def _register_piece(piece):
     rank = stratego_env.cell_rank(piece)
@@ -89,6 +91,7 @@ def _register_piece(piece):
         return
 
     pid = piece.id
+    _piece_rank[pid] = rank
     if pid in piece_beliefs:
         return
     
@@ -180,40 +183,43 @@ def step(obs):
 
 def generate_input(color):
     result = []
-    K = len(next(iter(piece_beliefs.values())))
+    K = BELIEF_LEN
+    max_pid = max(
+        list(piece_beliefs.keys()) + list(_piece_rank.keys()),
+        default=-1,
+    )
+    lookup_size = max_pid + 2  # reserve slot 0 for empty cells
+
+    self_lookup = np.zeros((lookup_size, K), dtype=float)
+    enemy_lookup = np.zeros((lookup_size, K), dtype=float)
+
+    for pid, player in _piece_player.items():
+        if player == color:
+            rank = _piece_rank.get(pid)
+            if rank is not None:
+                self_lookup[pid + 1] = one_hot(rank)
+
+    for pid, value in piece_beliefs.items():
+        player = _piece_player.get(pid)
+        if player is None or player == color:
+            continue
+        enemy_lookup[pid + 1] = value
+
     for h in piece_ids:
-        #lookup = np.zeros((max(piece_beliefs) + 1, K))
-        red_lookup = np.zeros((max(piece_beliefs) + 1, K))
-        blue_lookup = np.zeros((max(piece_beliefs) + 1, K))
+        ids = np.array(h, dtype=int).reshape(10, 10) + 1
 
-        for key, value in piece_beliefs.items():
-            if key == -1:
-                continue
-            if key > 50:
-                red_lookup[key] = value
-                blue_lookup[key] = 0
-            else:
-                red_lookup[key] = 0
-                blue_lookup[key] = value
+        self_channels = self_lookup[ids].transpose(2, 0, 1)
+        enemy_channels = enemy_lookup[ids].transpose(2, 0, 1)
 
-            #lookup[key] = value
-
-        #ids = np.append(np.array(h),np.array(h)).reshape(2, 10, 10)
-        ids = np.array(h).reshape(10, 10)
-
-        x = red_lookup[ids].transpose(2,0,1)
-        x = np.append(x, blue_lookup[ids].transpose(2,0,1)).reshape(24, 10, 10)
-
-        x = np.concatenate((x, np.expand_dims(empty, 0)),0)
-        x = np.concatenate((x, np.expand_dims(lakes, 0)),0)
+        x = np.concatenate((self_channels, enemy_channels), axis=0)
+        x = np.concatenate((x, np.expand_dims(empty, 0)), axis=0)
+        x = np.concatenate((x, np.expand_dims(lakes, 0)), axis=0)
 
         result.append(x)
     
     result = np.stack(result)
-    
-    #print(np.shape(result))      #(8, 26, 10, 10)
-    #print(empty)
-    #print(result[0][12 + 3])     #(0-11 is red) (12 - 24 is blue)
+
+    print(result[0][13])
 
     return result
     

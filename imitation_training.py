@@ -27,11 +27,10 @@ def main():
         probability_engine.initialize()
         
         for move in game.findall('move'):
-            probability_engine.step(env.step(move.get("source") + "-" + move.get("target")))
-            env.render(True)
-            probability_engine.generate_input(0) #0 is red
-            #time.sleep(1)
-            #time.sleep(5)
+            obs = env.step(move.get("source") + "-" + move.get("target"))
+            probability_engine.step(obs)
+            #env.render(True)
+            probability_engine.generate_input(obs['current_player']) #0 is red
 
 
 main()
