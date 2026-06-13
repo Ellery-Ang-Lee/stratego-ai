@@ -219,7 +219,5 @@ def generate_input(color):
     
     result = np.stack(result)
 
-    print(result[0][13])
-
     return result
     
