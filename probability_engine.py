@@ -6,7 +6,8 @@ H = 8  #history
 
 piece_beliefs = {}  #each piece id has a array of beliefs
 
-empty = np.zeros((10,10))
+# history of empty grids (one per timestep in history)
+empty_history = [np.zeros((10,10)) for _ in range(H)]
 lakes = [
   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -50,13 +51,14 @@ def one_hot(rank):
 
 
 def initialize():
-    global piece_beliefs, piece_ids, red_piece_counts, blue_piece_counts, _piece_rank
+    global piece_beliefs, piece_ids, red_piece_counts, blue_piece_counts, _piece_rank, empty_history
 
     piece_beliefs = {}
     piece_ids = [[-1] * 100 for _ in range(H)]
     red_piece_counts  = dict(_INITIAL_COUNTS)
     blue_piece_counts = dict(_INITIAL_COUNTS)
     _piece_rank = {}
+    empty_history = [np.zeros((10,10)) for _ in range(H)]
 
 
 def counts_for(player):
@@ -74,10 +76,14 @@ def _propagate_eliminations(player):
         if vec.max() == 1.0:
             continue
 
+        # Scale existing soft beliefs by the relative remaining counts for each rank.
+        # This preserves zeros introduced earlier (e.g., zeroing flag/bomb when moved)
         new_vec = vec.copy()
-        total = sum(list(counts.values())) 
-        for rank, count in counts.items():
-            new_vec[rank - 1] = count/total 
+        total = sum(list(counts.values()))
+        if total > 0:
+            for rank, count in counts.items():
+                # multiply existing belief by the availability weight
+                new_vec[rank - 1] = new_vec[rank - 1] * (count / total)
 
         piece_beliefs[pid] = renormalize(new_vec)
 
@@ -105,7 +111,7 @@ def _register_piece(piece):
 
 
 def step(obs):
-    global piece_ids, empty
+    global piece_ids
 
     from_piece = obs['from_piece']
     to_piece = obs['to_piece']
@@ -113,7 +119,7 @@ def step(obs):
 
     _register_piece(obs['from_piece'])
 
-    empty = np.zeros((10,10))
+    new_empty = np.zeros((10,10))
 
     # Register new stuff
     board = obs['board']
@@ -121,7 +127,7 @@ def step(obs):
         for c in range(10):
             _register_piece(board[r, c])
             if board[r,c].rank == 0:
-                empty[r,c] = 1
+                new_empty[r,c] = 1
 
     from_pid = from_piece.id
     from_player = stratego_env.cell_player(from_piece)
@@ -180,6 +186,10 @@ def step(obs):
     piece_ids.pop(0)
     piece_ids.append(snapshot)
 
+    # update empty history
+    empty_history.pop(0)
+    empty_history.append(new_empty)
+
 
 def generate_input(color):
     result = []
@@ -205,14 +215,17 @@ def generate_input(color):
             continue
         enemy_lookup[pid + 1] = value
 
-    for h in piece_ids:
+    for idx, h in enumerate(piece_ids):
+        idx = piece_ids.index(h)
         ids = np.array(h, dtype=int).reshape(10, 10) + 1
 
         self_channels = self_lookup[ids].transpose(2, 0, 1)
         enemy_channels = enemy_lookup[ids].transpose(2, 0, 1)
 
         x = np.concatenate((self_channels, enemy_channels), axis=0)
-        x = np.concatenate((x, np.expand_dims(empty, 0)), axis=0)
+        # use per-frame empty history plane
+        empty_plane = empty_history[idx]
+        x = np.concatenate((x, np.expand_dims(empty_plane, 0)), axis=0)
         x = np.concatenate((x, np.expand_dims(lakes, 0)), axis=0)
 
         result.append(x)

@@ -94,6 +94,8 @@ def rc_to_gravon(r, c):
         return f"{_COLS[c]}:"
     return f"{_COLS[c]}{10 - r}"
 
+def gravon_to_policy(s1, s2):
+    return (rc_to_pos(gravon_to_rc(s1)) * 100) + rc_to_pos(gravon_to_rc(s2))
 
 class StrategoEnv:
     def reset(self, red_setup: str = None, blue_setup: str = None):
@@ -242,7 +244,6 @@ class StrategoEnv:
                     print('~~ ', end='')
                 elif cell == EMPTY:
                     print(' . ', end='')
-                    print(cell.id)
                 else:
                     player = cell_player(cell)
                     rank = cell_rank(cell)
@@ -341,7 +342,7 @@ class StrategoEnv:
                     if not (0 <= nr < 10 and 0 <= nc < 10):
                         continue
                     target = self.board[nr, nc]
-                    if target != LAKE and (target == EMPTY or
+                    if target.rank != LAKE and (target.rank == EMPTY or
                                            cell_player(target) != self.current_player):
                         return True
         return False
@@ -374,5 +375,3 @@ class piece:
         self.moved = moved
         self.revealed = revealed
 
-        if self.id == 61:
-            print("SIXTY ONE: " + str(self.player))
