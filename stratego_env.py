@@ -95,7 +95,7 @@ def rc_to_gravon(r, c):
     return f"{_COLS[c]}{10 - r}"
 
 def gravon_to_policy(s1, s2):
-    return (rc_to_pos(gravon_to_rc(s1)) * 100) + rc_to_pos(gravon_to_rc(s2))
+    return (rc_to_pos(*gravon_to_rc(s1)) * 100) + rc_to_pos(*gravon_to_rc(s2))
 
 class StrategoEnv:
     def reset(self, red_setup: str = None, blue_setup: str = None):

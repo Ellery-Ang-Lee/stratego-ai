@@ -43,12 +43,12 @@ def main():
             if not str(file).split("-")[0] == "classic":
                 continue
 
-            print("\n\n")
-            print("reading from file: " + str(file))
+            print("\nreading from file: " + str(file))
 
             root = ET.parse('training_data/' + str(folder) + '/' + str(file)).getroot()
     
             for game in root.findall('game'):
+                print("----- game: " + str(game_count) + " -----")
 
                 if not (game.find('result').get('type') == "1" or game.find('result').get('type') == "3"):
                     continue
