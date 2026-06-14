@@ -12,7 +12,7 @@ from torch.utils.tensorboard import SummaryWriter
 #REMEMBER: SHUFFLE MULTIPLE GAMES INTO BATCH SO ITS LESS NOISY
 
 def main():
-    version = "1"
+    version = "2"
     game_count = 0
     global_step = 0
     writer = SummaryWriter("runs/experiment_" + version)
@@ -30,6 +30,7 @@ def main():
     
     if any(Path("models").iterdir()):
         newist = max([f for f in Path("models").iterdir() if f.is_file()], key=lambda f: f.stat().st_mtime)
+        print("loading model: " + str(newist))
         net.load_state_dict(torch.load(newist))
 
     batch_size = 32
@@ -80,7 +81,7 @@ def main():
                         pred = net(torch.FloatTensor(current_batch))
                         policy_loss = CEL(pred[0],torch.LongTensor(current_policy_labels))
                         value_loss = MSE(pred[1], torch.FloatTensor(current_value_labels))
-                        total_loss = policy_loss + value_loss
+                        total_loss = (policy_loss / 5)  + value_loss #5 is a constant to weight the value and policy
 
                         optim.zero_grad()
 
@@ -91,6 +92,7 @@ def main():
                         global_step += 1
                         writer.add_scalar("Loss/policy", policy_loss.item(), global_step)
                         writer.add_scalar("Loss/value", value_loss.item(), global_step)
+                        print(current_value_labels)
 
                 
                 game_count += 1
