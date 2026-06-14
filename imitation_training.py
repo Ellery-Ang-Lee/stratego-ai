@@ -17,8 +17,11 @@ def main():
     global_step = 0
     writer = SummaryWriter("runs/experiment_" + version)
 
+    device = torch.device("cuda" if torch.cuda.is_available() else 'cpu')
+    print("Training on device " + str(device))
+
     env = stratego_env.StrategoEnv()
-    net = model.Net()
+    net = model.Net().to(device)
 
     optim = torch.optim.Adam(
         net.parameters(),
@@ -79,8 +82,8 @@ def main():
                         current_batch_size = 0
                         
                         pred = net(torch.FloatTensor(current_batch))
-                        policy_loss = CEL(pred[0],torch.LongTensor(current_policy_labels))
-                        value_loss = MSE(pred[1], torch.FloatTensor(current_value_labels))
+                        policy_loss = CEL(pred[0],torch.LongTensor(current_policy_labels).to(device))
+                        value_loss = MSE(pred[1], torch.FloatTensor(current_value_labels).to(device))
                         total_loss = (policy_loss / 5)  + value_loss #5 is a constant to weight the value and policy
 
                         optim.zero_grad()
@@ -92,7 +95,6 @@ def main():
                         global_step += 1
                         writer.add_scalar("Loss/policy", policy_loss.item(), global_step)
                         writer.add_scalar("Loss/value", value_loss.item(), global_step)
-                        print(current_value_labels)
 
                 
                 game_count += 1
