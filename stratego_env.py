@@ -129,8 +129,10 @@ class StrategoEnv:
 
     def step(self, action) -> dict:
         fr, fc, tr, tc = self._parse_action(action)
+        
+        legal_cache = self._gen_legal_actions()
 
-        if not self._is_legal(fr, fc, tr, tc):
+        if not self._is_legal(fr, fc, tr, tc, legal_cache):
             raise ValueError(
                 f"Illegal move: {rc_to_gravon(fr,fc)}-{rc_to_gravon(tr,tc)}"
             )
@@ -208,6 +210,7 @@ class StrategoEnv:
             'winner': self.winner,
             'move_count': self.move_count,
             'current_player': self.current_player,
+            'legal_actions_mask': legal_cache
         }
 
     def legal_actions(self):
@@ -262,7 +265,7 @@ class StrategoEnv:
         return {
             'board': self.board.copy(),
             'current_player': self.current_player,
-            'legal_actions_mask': self.legal_actions_mask(),
+            #'legal_actions_mask': self.legal_actions_mask(),
         }
 
     def _move_piece(self, fr: int, fc: int, tr: int, tc: int):
@@ -347,8 +350,8 @@ class StrategoEnv:
                         return True
         return False
 
-    def _is_legal(self, fr: int, fc: int, tr: int, tc: int) -> bool:
-        return (rc_to_pos(fr, fc) * 100 + rc_to_pos(tr, tc)) in self._gen_legal_actions()
+    def _is_legal(self, fr: int, fc: int, tr: int, tc: int, legal_actions) -> bool:
+        return (rc_to_pos(fr, fc) * 100 + rc_to_pos(tr, tc)) in legal_actions
 
     def _parse_action(self, action):
         if isinstance(action, str):

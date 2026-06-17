@@ -216,7 +216,6 @@ def generate_input(color):
         enemy_lookup[pid + 1] = value
 
     for idx, h in enumerate(piece_ids):
-        idx = piece_ids.index(h)
         ids = np.array(h, dtype=int).reshape(10, 10) + 1
 
         self_channels = self_lookup[ids].transpose(2, 0, 1)

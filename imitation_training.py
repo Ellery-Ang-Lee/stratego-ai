@@ -11,76 +11,38 @@ from torch.utils.tensorboard import SummaryWriter
 
 #REMEMBER: SHUFFLE MULTIPLE GAMES INTO BATCH SO ITS LESS NOISY
 
+version = "2"
+game_count = 6000
+global_step = 26116
+validation = True
+
+if torch.backends.mps.is_available() and not validation:
+    device = torch.device("mps")
+elif torch.cuda.is_available() and not validation:
+    device = torch.device("cuda")
+else:
+    device = torch.device("cpu")
+
+print("On device " + str(device))
+
+env = stratego_env.StrategoEnv()
+net = model.Net().to(device)
+
+net.train()
+
+CEL = nn.CrossEntropyLoss()
+MSE = nn.MSELoss()
+
+optim = torch.optim.Adam(
+    net.parameters(),
+    lr = 0.001
+)
+
 def main():
-    version = "2"
-    game_count = 6000
-    global_step = 26116
-    validation = True
-
-    if torch.backends.mps.is_available() and not validation:
-        device = torch.device("mps")
-    elif torch.cuda.is_available() and not validation:
-        device = torch.device("cuda")
-    else:
-        device = torch.device("cpu")
-
-    print("On device " + str(device))
-
-    env = stratego_env.StrategoEnv()
-    net = model.Net().to(device)
-    
-    CEL = nn.CrossEntropyLoss()
-    MSE = nn.MSELoss()
-
-    optim = torch.optim.Adam(
-        net.parameters(),
-        lr = 0.001
-    )
-
     if validation:
-        net.eval()
         for checkpoint in Path("models").iterdir():
             net.load_state_dict(torch.load(checkpoint, map_location=device))
-            total_loss = 0
-            move_count = 0
-            for folder in os.listdir("validation_data"):
-                for file in os.listdir(os.path.join("validation_data", folder)):
-                    if not str(file).split("-")[0] == "classic":
-                        continue
-                    root = ET.parse('validation_data/' + str(folder) + '/' + str(file)).getroot()
-                    for game in root.findall('game'):
-                        setup = game.find('field').get("content")[::-1]
-                        temp = ""
-                        for i in range(10):
-                            temp += setup[(i * 10):10 + (i * 10)][::-1]
-                        setup = temp
-                
-                        env.reset(red_setup=setup[:60], blue_setup=setup[60:])
-                        probability_engine.initialize()
-
-                        for move,next_move in zip(game.findall('move'), game.findall('move')[1:]):
-                            obs = env.step(move.get("source") + "-" + move.get("target"))
-                            probability_engine.step(obs)
-                            current_batch = probability_engine.generate_input(obs['current_player'])
-                            current_policy_labels = stratego_env.gravon_to_policy(next_move.get("source"),next_move.get("target"))
-                            with torch.no_grad():
-                                pred = net(
-                                    torch.tensor(
-                                        np.expand_dims(current_batch, axis=0),
-                                        dtype=torch.float32,
-                                        device=device
-                                    )
-                                )
-                            policy_loss = CEL(pred[0],torch.LongTensor([current_policy_labels]))
-
-                            total_loss += policy_loss
-                            move_count += 1
-                        
-            print("\n\nMODEL: " + str(checkpoint) + " ----------")
-            print("AVG loss: " + str(total_loss / move_count))
-
-        return
-    
+            validate(None)
     else:
         writer = SummaryWriter("runs/experiment_" + version)
 
@@ -88,7 +50,6 @@ def main():
             newist = max([f for f in Path("models").iterdir() if f.is_file()], key=lambda f: f.stat().st_mtime)
             print("loading model: " + str(newist))
             net.load_state_dict(torch.load(newist, map_location=device))
-
 
         batch_size = 32
         current_batch_size = 0
@@ -149,7 +110,8 @@ def main():
 
                                 policy_loss = CEL(pred[0],torch.LongTensor(current_policy_labels).to(device))
                                 #value_loss = MSE(pred[1], torch.FloatTensor(current_value_labels).to(device))
-                                total_loss = (policy_loss / 9.2) #+ value_loss #5 is a constant to weight the value and policy
+                                #total_loss = (policy_loss / 9.2) #+ value_loss #5 is a constant to weight the value and policy
+                                total_loss = policy_loss
 
                                 optim.zero_grad()
 
@@ -163,12 +125,58 @@ def main():
 
                         
                         game_count += 1
+                        
+                        if game_count % 50 == 0:
+                            validate(writer)
 
                         if game_count % 500 == 0 and game_count != 0:
-                            torch.save(net.state_dict(), "models/" + version + "-" + str(game_count))                    
-
-
+                            torch.save(net.state_dict(), "models/" + version + "-" + str(game_count)) 
         return
 
+def validate(writer = None):
+    net.eval()
+
+    total_loss = 0
+    move_count = 0
+    for folder in os.listdir("validation_data"):
+        for file in os.listdir(os.path.join("validation_data", folder)):
+            if not str(file).split("-")[0] == "classic":
+                continue
+            root = ET.parse('validation_data/' + str(folder) + '/' + str(file)).getroot()
+            for game in root.findall('game'):
+                if not (game.find('result').get('type') == "1" or game.find('result').get('type') == "3"):
+                    continue
+                if game.find('field') is None: continue
+                setup = game.find('field').get("content")[::-1]
+                temp = ""
+                for i in range(10):
+                    temp += setup[(i * 10):10 + (i * 10)][::-1]
+                setup = temp
+        
+                env.reset(red_setup=setup[:60], blue_setup=setup[60:])
+                probability_engine.initialize()
+
+                for move,next_move in zip(game.findall('move'), game.findall('move')[1:]):
+                    obs = env.step(move.get("source") + "-" + move.get("target"))
+                    probability_engine.step(obs)
+                    current_batch = probability_engine.generate_input(obs['current_player'])
+                    current_policy_labels = stratego_env.gravon_to_policy(next_move.get("source"),next_move.get("target"))
+                    with torch.no_grad():
+                        pred = net(
+                            torch.tensor(
+                                np.expand_dims(current_batch, axis=0),
+                                dtype=torch.float32,
+                                device=device
+                            )
+                        )
+                    policy_loss = CEL(pred[0],torch.LongTensor([current_policy_labels]))
+
+                    total_loss += policy_loss.item()
+                    move_count += 1
+    
+    if writer is not None:
+        writer.add_scalar("Loss/validation", total_loss / move_count, global_step)
+
+    net.train()
 
 main()
