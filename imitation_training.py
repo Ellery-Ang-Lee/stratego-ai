@@ -11,10 +11,10 @@ from torch.utils.tensorboard import SummaryWriter
 
 #REMEMBER: SHUFFLE MULTIPLE GAMES INTO BATCH SO ITS LESS NOISY
 
-version = "2"
-game_count = 6000
-global_step = 26116
-validation = True
+version = "3"
+game_count = 0
+global_step = 0
+validation = False
 
 if torch.backends.mps.is_available() and not validation:
     device = torch.device("mps")
@@ -35,10 +35,11 @@ MSE = nn.MSELoss()
 
 optim = torch.optim.Adam(
     net.parameters(),
-    lr = 0.001
+    lr = 0.002
 )
 
 def main():
+    global game_count, global_step
     if validation:
         for checkpoint in Path("models").iterdir():
             net.load_state_dict(torch.load(checkpoint, map_location=device))
@@ -51,13 +52,13 @@ def main():
             print("loading model: " + str(newist))
             net.load_state_dict(torch.load(newist, map_location=device))
 
-        batch_size = 32
+        batch_size = 16
         current_batch_size = 0
         current_batch = np.zeros((32, 8, 26, 10, 10))
         #current_value_labels = np.zeros((32, 1))
         current_policy_labels = np.zeros((32,), dtype=np.int64)
         
-        for epoch in range(10):
+        for epoch in range(20):
             for folder in os.listdir("training_data"):
                 for file in os.listdir(os.path.join("training_data", folder)):
                     if not str(file).split("-")[0] == "classic":
@@ -126,7 +127,7 @@ def main():
                         
                         game_count += 1
                         
-                        if game_count % 50 == 0:
+                        if game_count % 250 == 0:
                             validate(writer)
 
                         if game_count % 500 == 0 and game_count != 0:
@@ -169,7 +170,14 @@ def validate(writer = None):
                                 device=device
                             )
                         )
-                    policy_loss = CEL(pred[0],torch.LongTensor([current_policy_labels]))
+
+                    target = torch.tensor(
+                        [current_policy_labels],
+                        dtype=torch.long,
+                        device=device
+                    )
+
+                    policy_loss = CEL(pred[0], target)
 
                     total_loss += policy_loss.item()
                     move_count += 1
