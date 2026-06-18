@@ -9,16 +9,15 @@ import torch
 import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
 
-#REMEMBER: SHUFFLE MULTIPLE GAMES INTO BATCH SO ITS LESS NOISY
+version = "4"
+game_count = 1500
+global_step = 29833
+batch_size = 16
+validation = True
 
-version = "3"
-game_count = 0
-global_step = 0
-validation = False
-
-if torch.backends.mps.is_available() and not validation:
+if torch.backends.mps.is_available():
     device = torch.device("mps")
-elif torch.cuda.is_available() and not validation:
+elif torch.cuda.is_available():
     device = torch.device("cuda")
 else:
     device = torch.device("cpu")
@@ -35,24 +34,26 @@ MSE = nn.MSELoss()
 
 optim = torch.optim.Adam(
     net.parameters(),
-    lr = 0.002
+    lr = 0.004
 )
 
 def main():
-    global game_count, global_step
+    global game_count, global_step, batch_size
     if validation:
         for checkpoint in Path("models").iterdir():
             net.load_state_dict(torch.load(checkpoint, map_location=device))
-            validate(None)
+            print(str(checkpoint) + ": " + str(validate(None)))
+        return
     else:
         writer = SummaryWriter("runs/experiment_" + version)
 
         if any(Path("models").iterdir()):
             newist = max([f for f in Path("models").iterdir() if f.is_file()], key=lambda f: f.stat().st_mtime)
-            print("loading model: " + str(newist))
-            net.load_state_dict(torch.load(newist, map_location=device))
+            print(str(newist).split("/")[1][0])
+            if str(newist).split("/")[1][0] == version:
+                print("loading model: " + str(newist))
+                net.load_state_dict(torch.load(newist, map_location=device))
 
-        batch_size = 16
         current_batch_size = 0
         current_batch = np.zeros((32, 8, 26, 10, 10))
         #current_value_labels = np.zeros((32, 1))
@@ -87,8 +88,6 @@ def main():
                     
                         env.reset(red_setup=setup[:60], blue_setup=setup[60:])
                         probability_engine.initialize()
-
-                        #env.render(True)
                 
                         for move,next_move in zip(game.findall('move'), game.findall('move')[1:]):
                             obs = env.step(move.get("source") + "-" + move.get("target"))
@@ -139,6 +138,11 @@ def validate(writer = None):
 
     total_loss = 0
     move_count = 0
+    current_batch_size = 0
+
+    current_batch = np.zeros((32, 8, 26, 10, 10))
+    current_policy_labels = np.zeros((32,), dtype=np.int64)
+
     for folder in os.listdir("validation_data"):
         for file in os.listdir(os.path.join("validation_data", folder)):
             if not str(file).split("-")[0] == "classic":
@@ -160,30 +164,39 @@ def validate(writer = None):
                 for move,next_move in zip(game.findall('move'), game.findall('move')[1:]):
                     obs = env.step(move.get("source") + "-" + move.get("target"))
                     probability_engine.step(obs)
-                    current_batch = probability_engine.generate_input(obs['current_player'])
-                    current_policy_labels = stratego_env.gravon_to_policy(next_move.get("source"),next_move.get("target"))
-                    with torch.no_grad():
-                        pred = net(
-                            torch.tensor(
-                                np.expand_dims(current_batch, axis=0),
-                                dtype=torch.float32,
-                                device=device
+                    print(env.generate_website_board())
+                    current_batch[current_batch_size] = probability_engine.generate_input(obs['current_player'])
+                    current_policy_labels[current_batch_size] = stratego_env.gravon_to_policy(next_move.get("source"),next_move.get("target"))
+
+                    current_batch_size += 1
+
+                    if current_batch_size == batch_size:
+                        current_batch_size = 0
+
+                        with torch.no_grad():
+                            pred = net(
+                                torch.tensor(
+                                    current_batch,
+                                    dtype=torch.float32,
+                                    device=device
+                                )
                             )
+
+                        target = torch.tensor(
+                            current_policy_labels,
+                            dtype=torch.long,
+                            device=device
                         )
 
-                    target = torch.tensor(
-                        [current_policy_labels],
-                        dtype=torch.long,
-                        device=device
-                    )
+                        policy_loss = CEL(pred[0], target)
 
-                    policy_loss = CEL(pred[0], target)
-
-                    total_loss += policy_loss.item()
-                    move_count += 1
+                        total_loss += policy_loss.item()
+                        move_count += 1
     
     if writer is not None:
         writer.add_scalar("Loss/validation", total_loss / move_count, global_step)
+    else:
+        return total_loss / move_count
 
     net.train()
 

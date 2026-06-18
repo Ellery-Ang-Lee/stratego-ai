@@ -29,6 +29,36 @@ GRAVON_TO_RANK = {
     "A" : EMPTY, "_" : LAKE
 }
 
+RANK_TO_GB = {
+    BOMB: "N", 
+    SPY: "O",
+    SCOUT: "P",
+    MINER: "Q",
+    SERGEANT: "R",
+    LIEUTENANT: "S",
+    CAPTAIN: "T",
+    MAJOR: "U",
+    COLONEL: "V",
+    GENERAL: "W",
+    MARSHAL: "X",
+    FLAG: "Y",
+}
+
+RANK_TO_GR = {
+    BOMB: "B",
+    SPY: "C",
+    SCOUT: "D",
+    MINER: "E",
+    SERGEANT: "F",
+    LIEUTENANT: "G",
+    CAPTAIN: "H",
+    MAJOR: "I",
+    COLONEL: "J",
+    GENERAL: "K",
+    MARSHAL: "L", 
+    FLAG: "M",
+}
+
 RANK_SYMBOL = {
     FLAG:'F', SPY:'1', SCOUT:'2', MINER:'3', SERGEANT:'4',
     LIEUTENANT:'5', CAPTAIN:'6', MAJOR:'7', COLONEL:'8',
@@ -259,7 +289,20 @@ class StrategoEnv:
         player_str = 'RED' if self.current_player == RED else 'BLUE'
         print(f"\n  Turn: {player_str}   Move #{self.move_count}")
 
-
+    def generate_website_board(self):
+        result = ""
+        for row in self.board:
+            for piece in row:
+                piece_rank = cell_rank(piece)
+                if piece_rank == EMPTY:
+                    result += "A"
+                elif piece_rank == LAKE:
+                    result += "_"
+                elif piece.player == RED:
+                    result += RANK_TO_GR[piece_rank]
+                else:
+                    result += RANK_TO_GB[piece_rank]
+        return result
 
     def _observe(self) -> dict:
         return {

@@ -21,7 +21,8 @@ class Policy(nn.Module):
         self.conv1 = nn.Conv2d(256, 2, 1)
         self.batchnorm1 = nn.BatchNorm2d(2)
         self.linear1 = nn.Linear(200, 1024)
-        self.linear2 = nn.Linear(1024, 10000)
+        self.linear2 = nn.Linear(1024, 4096)
+        self.linear3 = nn.Linear(4096, 10000)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -31,6 +32,8 @@ class Policy(nn.Module):
         x = self.linear1(x)
         x = F.relu(x)
         x = self.linear2(x)
+        x = F.relu(x)
+        x = self.linear3(x)
         return x
 
 class Value(nn.Module):
@@ -60,8 +63,8 @@ class Backbone(nn.Module):
         self.block2 = ResidualBlock()
         self.block3 = ResidualBlock()
         self.block4 = ResidualBlock()
-        self.block5 = ResidualBlock()
-        self.block6 = ResidualBlock()
+        #self.block5 = ResidualBlock()
+        #self.block6 = ResidualBlock()
         self.conv1 = nn.Conv2d(208, 256, 3, 1, 1)
         self.batchnorm1 = nn.BatchNorm2d(256)
 
@@ -75,8 +78,8 @@ class Backbone(nn.Module):
         x = self.block2(x)
         x = self.block3(x)
         x = self.block4(x)
-        x = self.block5(x)
-        x = self.block6(x)
+        #x = self.block5(x)
+        #x = self.block6(x)
         return x
 
         
