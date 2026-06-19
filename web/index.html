@@ -5,6 +5,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&display=swap" rel="stylesheet">
+    
+    <link rel="icon" href="./redfavicon.ico">
+
 
     <title>Stratego</title>
 </head>
@@ -49,6 +52,7 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
+            aspect-ratio: 1 / 1;
         }
 
         .cell::after {
@@ -83,11 +87,20 @@
             <input type="checkbox" id="showopponent" onclick="render()">
         </label>
 
-        <!-- <button
-            onclick='ws.send(JSON.stringify({type: "turn", data: "blue"})); document.getElementById("turn").innerText = "Blue Turn"'>Turn
-            Done</button> -->
-
         <span style="font-size: 2em;" id="turn">Red Turn</span>
+
+        <label for="useicons">
+            Use Icons
+            <input type="checkbox" id="useicons" onclick="saveUseIcons(); render()">
+        </label>
+
+
+        <div>
+            <input type="text" id="serverip" placeholder="IP Address" onchange="setServerIp(this.value)">
+            <br>
+            <span id="connstatus">Not Connected</span>
+        </div>
+
     </div>
     <div id="board">
     </div>
@@ -162,6 +175,7 @@
             "Bomb": "B"
         }
 
+        // Icons from https://vector.gissen.nl/stratego.html
         function render() {
             for (let i = 0; i < 100; i++) {
                 const cell = document.getElementById("cell" + i);
@@ -171,17 +185,44 @@
 
                 let piece = game.charAt(redteam ? 99 - i : i);
 
-                // cell.style.backgroundColor = piece == "_" ? '#0055ff' : '#33dd22';
-                cell.style.background = piece == "_" ? 'url(https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExbThxM3NjeG40d3h1a204bTl4MW5xank3ZmVmY3dpdTlxcW11MGtibiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/QjkkR8Nn0clgYcnOtC/giphy.gif)' : '#33dd22';
+                cell.style.backgroundColor = piece == "_" ? '#0055ff' : '#33dd22';
+                // cell.style.background = piece == "_" ? 'url(https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExbThxM3NjeG40d3h1a204bTl4MW5xank3ZmVmY3dpdTlxcW11MGtibiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/QjkkR8Nn0clgYcnOtC/giphy.gif)' : '#33dd22';
 
                 if (showopponent || i == revealed || !redteam && blue[piece] || redteam && red[piece]) {
-                    cell.textContent = piece == "_" || piece == "A" ? "" : rank[red[piece] || blue[piece]];
+
+                    if (piece == "_" || piece == "A") {
+                        cell.innerHTML = "";
+                    } else {
+                        cell.innerHTML = `<div style="position: relative; display: flex; align-items: center; justify-content: center;">`;
+                        cell.innerHTML += `<img id="castle${i}" style="height: 2.2em; width: auto;" src="${blue[piece] ? "blue" : "red"}castle.svg"/>`
+                        if (document.getElementById("useicons").checked)
+                            cell.innerHTML += `<img style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -40%); height: 2.0em; width: auto; filter: invert(1);" src="stratego-${String(red[piece] || blue[piece]).toLowerCase()}.svg"/>`
+                        else
+                            cell.innerHTML += `<span style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -40%); color: white;">${piece == "_" || piece == "A" ? "" : rank[red[piece] || blue[piece]]}</span>`;
+                        cell.innerHTML += "</div>";
+                    }
+
                 } else {
-                    cell.textContent = piece == "_" || piece == "A" ? "" : "?";
+                    // cell.innerHTML = piece == "_" || piece == "A" ? "" : "?";
+
+                    if (piece == "_" || piece == "A") {
+                        cell.innerHTML = "";
+                    } else {
+                        cell.innerHTML = `<div style="position: relative; display: flex; align-items: center; justify-content: center;">`;
+                        cell.innerHTML += `<img id="castle${i}" style="height: 2.2em; width: auto;" src="${blue[piece] ? "blue" : "red"}castle.svg"/>`
+                        cell.innerHTML += "</div>";
+                    }
                 }
 
-                cell.style.color = red[piece] ? 'red' : blue[piece] ? 'blue' : 'black';
+                // cell.style.color = red[piece] ? 'red' : blue[piece] ? 'blue' : 'black';
             }
+        }
+
+        // Restore Use Icons preference
+        document.getElementById("useicons").checked = localStorage.getItem("useicons") === "true";
+
+        function saveUseIcons() {
+            localStorage.setItem("useicons", document.getElementById("useicons").checked);
         }
 
         render();
@@ -224,79 +265,107 @@
             revealed = to;
             render();
 
-            // if (game[redteam ? 99 - to : to] == "A" || game[redteam ? 99 - to : to] == "_") {
-
-            // setTimeout(() => {
-                console.log("turn changed");
-                ws.send(JSON.stringify({ type: "turn", data: "blue" }));
-                document.getElementById("turn").innerText = "Blue Turn";
-            // }, 1000);
-
-            // } else {
-
-            //     setTimeout(() => {
-            //         console.log("turn changed");
-            //         ws.send(JSON.stringify({ type: "turn", data: "blue" }));
-            //         document.getElementById("turn").innerText = "Blue Turn";
-            //     }, 1000);
-            // }
+            console.log("turn changed");
+            ws.send(JSON.stringify({ type: "turn", data: "blue" }));
+            document.getElementById("turn").innerText = "Blue Turn";
+            document.querySelector("link[rel~='icon']").href = "./bluefavicon.ico";
         }
 
-        // const ip = "172.16.43.101"
-        const ip = "50.125.81.40"
-        const ws = new WebSocket(`ws://${ip}:8081`);
+        // Restore server IP preference
+        let ip = localStorage.getItem("serverip") || "50.125.81.40";
+        document.getElementById("serverip").value = ip;
 
-        ws.onmessage = (e) => {
-            // console.log(e);
+        let ws = null;
+        let reconnectTimer = null;
 
-            let json = JSON.parse(e.data);
+        function setStatus(text) {
+            document.getElementById("connstatus").innerText = text;
+        }
 
-            if (json) {
-                switch (json.type) {
-                    case "game":
-                        game = json.data.split("").reverse().join("")
-                        render();
-                        break;
-                    case "turn":
-                        if (json.data == "red") {
-                            document.getElementById("turn").innerText = "Red Turn"
-                            revealed = -1;
-                        }
-                        break;
-                    case "reveal":
-                        revealed = json.data;
-                        render();
-                        break;
-                    case "move":
-                        if (json.data == "invalid") {
-                            alert("Invalid Move!");
-                        } else {
-                            move(json.data.split(",")[0], json.data.split(",")[1]);
-                        }
-                        break;
-                    default:
-                        alert("Failed to handle JSON: " + e.data);
-                        break;
+        function setServerIp(value) {
+            ip = value.trim();
+            localStorage.setItem("serverip", ip);
+            // Reconnect to the new address
+            if (ws) {
+                ws.onclose = null; // prevent the old socket from triggering a reconnect
+                ws.close();
+            }
+            connect();
+        }
 
+        function connect() {
+            if (reconnectTimer) {
+                clearTimeout(reconnectTimer);
+                reconnectTimer = null;
+            }
+
+            if (!ip) {
+                setStatus("Not Connected");
+                return;
+            }
+
+            setStatus("Connecting...");
+            ws = new WebSocket(`ws://${ip}:8081`);
+
+            ws.onmessage = (e) => {
+                // console.log(e);
+
+                let json = JSON.parse(e.data);
+
+                if (json) {
+                    switch (json.type) {
+                        case "game":
+                            game = json.data.split("").reverse().join("")
+                            render();
+                            break;
+                        case "turn":
+                            if (json.data == "red") {
+                                document.getElementById("turn").innerText = "Red Turn"
+                                document.querySelector("link[rel~='icon']").href = "./redfavicon.ico";
+                                revealed = -1;
+                            }
+                            break;
+                        case "reveal":
+                            revealed = json.data;
+                            render();
+                            break;
+                        case "move":
+                            if (json.data == "invalid") {
+                                alert("Invalid Move!");
+                            } else {
+                                move(json.data.split(",")[0], json.data.split(",")[1]);
+                            }
+                            break;
+                        default:
+                            alert("Failed to handle JSON: " + e.data);
+                            break;
+
+                    }
+                } else {
+                    alert("Failed to parse JSON");
                 }
-            } else {
-                alert("Failed to parse JSON");
+            }
+
+            ws.onopen = () => {
+                console.log("Websocket Connected");
+                setStatus("Connected");
+                // console.log(JSON.stringify({type: "game", data: game}));
+                ws.send(JSON.stringify({ type: "game", data: game.split("").reverse().join("") }));
+            }
+
+            ws.onclose = () => {
+                console.log("Websocket Closed, reconnecting...");
+                setStatus("Reconnecting...");
+                reconnectTimer = setTimeout(connect, 2000);
+            }
+
+            ws.onerror = (e) => {
+                console.log("Websocket Error", e);
+                // onclose fires after onerror and handles the reconnect
             }
         }
 
-        ws.onopen = () => {
-            console.log("Websocket Connected");
-            // console.log(JSON.stringify({type: "game", data: game}));
-            ws.send(JSON.stringify({ type: "game", data: game.split("").reverse().join("") }));
-        }
-
-        ws.onclose = () => {
-            console.log("Websocket Closed");
-        }
-
-        ws.onerror = (e) => {
-            console.log("Websocket Error", e);
-        }
+        connect();
     </script>
 </body>
 

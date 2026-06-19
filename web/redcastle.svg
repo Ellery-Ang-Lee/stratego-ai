@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="210mm"
+   height="296.99997mm"
+   viewBox="0 0 210 296.99997"
+   version="1.1"
+   id="svg1"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <g
+     id="layer1">
+    <rect
+       style="fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:95.4618;stroke-linecap:round;stroke-linejoin:round"
+       id="rect1"
+       width="210"
+       height="266.99997"
+       x="-7.1054274e-15"
+       y="30" />
+    <rect
+       style="fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:50.5178;stroke-linecap:round;stroke-linejoin:round"
+       id="rect2"
+       width="30"
+       height="30"
+       x="60"
+       y="0" />
+    <rect
+       style="fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:54.5576;stroke-linecap:round;stroke-linejoin:round"
+       id="rect3"
+       width="30"
+       height="30"
+       x="-7.1054274e-15"
+       y="0" />
+    <rect
+       style="fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:51.6746;stroke-linecap:round;stroke-linejoin:round"
+       id="rect4"
+       width="30"
+       height="30"
+       x="180"
+       y="0" />
+    <rect
+       style="fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:75.2079;stroke-linecap:round;stroke-linejoin:round"
+       id="rect5"
+       width="30"
+       height="30"
+       x="120"
+       y="-1.503982e-14" />
+  </g>
+</svg>
