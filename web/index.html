@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&display=swap" rel="stylesheet">
+
+    <title>Stratego</title>
+</head>
+
+<body>
+    <style>
+        :root {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        body {
+            margin: 0;
+        }
+
+        #controls {
+            height: 10vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: "Black Ops One", system-ui;
+            gap: 1rem;
+        }
+
+        #board {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            grid-template-rows: repeat(10, 1fr);
+            gap: 1px;
+            aspect-ratio: 1 / 1;
+            height: 90vh;
+        }
+
+        .cell {
+            position: relative;
+            font-family: "Black Ops One", system-ui;
+            font-size: 200%;
+            color: black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .cell::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.4);
+            opacity: 0;
+            /* transition: opacity 0.3s ease; */
+        }
+
+        .cell:hover::after {
+            opacity: 1;
+        }
+
+        .cell.selected::after {
+            opacity: 1;
+            background-color: rgba(255, 255, 0, 0.6);
+        }
+    </style>
+    <div id="controls">
+        <label for="redteam">
+            Red Team
+            <input type="checkbox" id="redteam" checked onclick="render()">
+        </label>
+
+        <label for="showopponent">
+            Show Opponent
+            <input type="checkbox" id="showopponent" onclick="render()">
+        </label>
+
+        <!-- <button
+            onclick='ws.send(JSON.stringify({type: "turn", data: "blue"})); document.getElementById("turn").innerText = "Blue Turn"'>Turn
+            Done</button> -->
+
+        <span style="font-size: 2em;" id="turn">Red Turn</span>
+    </div>
+    <div id="board">
+    </div>
+
+    <script>
+        let game = "GMDEDEGBBFEDHEBGBEGDIJCJIDDIBDFHKLFHDBHFAA__AA__AAAA__AA__AAPPUXPRWUNNPQTRUTPQRSSTNVPPOVNRQNYNSQSPTQ";
+
+        let revealed = -1;
+
+        const board = document.getElementById('board');
+        for (let i = 0; i < 100; i++) {
+            const cell = document.createElement('div');
+            cell.classList.add('cell');
+            cell.id = "cell" + i;
+            cell.onclick = () => cellclick(i);
+            cell.style.backgroundColor = [42, 43, 46, 47, 52, 53, 56, 57].includes(i) ? '#0055ff' : '#33dd22';
+            board.appendChild(cell);
+        }
+
+        // GRAVON_TO_RANK = {
+        //     "B": BOMB, "N": BOMB, "C": SPY, "O": SPY,
+        //     "D": SCOUT, "P": SCOUT, "E": MINER, "Q": MINER,
+        //     "F": SERGEANT, "R": SERGEANT, "G": LIEUTENANT, "S": LIEUTENANT,
+        //     "H": CAPTAIN, "T": CAPTAIN, "I": MAJOR, "U": MAJOR,
+        //     "J": COLONEL, "V": COLONEL, "K": GENERAL, "W": GENERAL,
+        //     "L": MARSHAL, "X": MARSHAL, "M": FLAG, "Y": FLAG,
+        //     "A": EMPTY, "_": LAKE
+        // }
+
+        const red = {
+            "B": "Bomb",
+            "C": "Spy",
+            "D": "Scout",
+            "E": "Miner",
+            "F": "Sergeant",
+            "G": "Lieutenant",
+            "H": "Captain",
+            "I": "Major",
+            "J": "Colonel",
+            "K": "General",
+            "L": "Marshal",
+            "M": "Flag",
+        };
+
+        const blue = {
+            "N": "Bomb",
+            "O": "Spy",
+            "P": "Scout",
+            "Q": "Miner",
+            "R": "Sergeant",
+            "S": "Lieutenant",
+            "T": "Captain",
+            "U": "Major",
+            "V": "Colonel",
+            "W": "General",
+            "X": "Marshal",
+            "Y": "Flag"
+        };
+
+        const rank = {
+            "Flag": "F",
+            "Spy": "1",
+            "Scout": "2",
+            "Miner": "3",
+            "Sergeant": "4",
+            "Lieutenant": "5",
+            "Captain": "6",
+            "Major": "7",
+            "Colonel": "8",
+            "General": "9",
+            "Marshal": "10",
+            "Bomb": "B"
+        }
+
+        function render() {
+            for (let i = 0; i < 100; i++) {
+                const cell = document.getElementById("cell" + i);
+
+                let redteam = document.getElementById('redteam').checked;
+                let showopponent = document.getElementById('showopponent').checked;
+
+                let piece = game.charAt(redteam ? 99 - i : i);
+
+                // cell.style.backgroundColor = piece == "_" ? '#0055ff' : '#33dd22';
+                cell.style.background = piece == "_" ? 'url(https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExbThxM3NjeG40d3h1a204bTl4MW5xank3ZmVmY3dpdTlxcW11MGtibiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/QjkkR8Nn0clgYcnOtC/giphy.gif)' : '#33dd22';
+
+                if (showopponent || i == revealed || !redteam && blue[piece] || redteam && red[piece]) {
+                    cell.textContent = piece == "_" || piece == "A" ? "" : rank[red[piece] || blue[piece]];
+                } else {
+                    cell.textContent = piece == "_" || piece == "A" ? "" : "?";
+                }
+
+                cell.style.color = red[piece] ? 'red' : blue[piece] ? 'blue' : 'black';
+            }
+        }
+
+        render();
+
+        function cellclick(i) {
+            let redteam = document.getElementById('redteam').checked;
+            let piece = game.charAt(redteam ? 99 - i : i);
+
+            if (redteam && !red[piece] || !redteam && !blue[piece]) {
+                for (let j = 0; j < 100; j++) {
+                    if (document.getElementById("cell" + j).classList.contains("selected")) {
+                        selected = j
+                        break;
+                    }
+                }
+
+                if (selected) {
+                    for (let j = 0; j < 100; j++) {
+                        document.getElementById("cell" + j).classList.remove("selected");
+                    }
+
+                    if (redteam) {
+                        ws.send(JSON.stringify({ type: "move", data: `${selected},${i}` }));
+                    } else {
+                        ws.send(JSON.stringify({ type: "move", data: `${99 - selected},${99 - i}` }));
+                    }
+                }
+
+                return;
+            }
+
+            for (let j = 0; j < 100; j++) {
+                document.getElementById("cell" + j).classList.remove("selected");
+            }
+
+            document.getElementById("cell" + i).classList.add("selected");
+        }
+
+        function move(from, to) {
+            revealed = to;
+            render();
+
+            // if (game[redteam ? 99 - to : to] == "A" || game[redteam ? 99 - to : to] == "_") {
+
+            // setTimeout(() => {
+                console.log("turn changed");
+                ws.send(JSON.stringify({ type: "turn", data: "blue" }));
+                document.getElementById("turn").innerText = "Blue Turn";
+            // }, 1000);
+
+            // } else {
+
+            //     setTimeout(() => {
+            //         console.log("turn changed");
+            //         ws.send(JSON.stringify({ type: "turn", data: "blue" }));
+            //         document.getElementById("turn").innerText = "Blue Turn";
+            //     }, 1000);
+            // }
+        }
+
+        // const ip = "172.16.43.101"
+        const ip = "50.125.81.40"
+        const ws = new WebSocket(`ws://${ip}:8081`);
+
+        ws.onmessage = (e) => {
+            // console.log(e);
+
+            let json = JSON.parse(e.data);
+
+            if (json) {
+                switch (json.type) {
+                    case "game":
+                        game = json.data.split("").reverse().join("")
+                        render();
+                        break;
+                    case "turn":
+                        if (json.data == "red") {
+                            document.getElementById("turn").innerText = "Red Turn"
+                            revealed = -1;
+                        }
+                        break;
+                    case "reveal":
+                        revealed = json.data;
+                        render();
+                        break;
+                    case "move":
+                        if (json.data == "invalid") {
+                            alert("Invalid Move!");
+                        } else {
+                            move(json.data.split(",")[0], json.data.split(",")[1]);
+                        }
+                        break;
+                    default:
+                        alert("Failed to handle JSON: " + e.data);
+                        break;
+
+                }
+            } else {
+                alert("Failed to parse JSON");
+            }
+        }
+
+        ws.onopen = () => {
+            console.log("Websocket Connected");
+            // console.log(JSON.stringify({type: "game", data: game}));
+            ws.send(JSON.stringify({ type: "game", data: game.split("").reverse().join("") }));
+        }
+
+        ws.onclose = () => {
+            console.log("Websocket Closed");
+        }
+
+        ws.onerror = (e) => {
+            console.log("Websocket Error", e);
+        }
+    </script>
+</body>
+
+</html>
