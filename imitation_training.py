@@ -10,10 +10,10 @@ import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
 
 version = "4"
-game_count = 1500
-global_step = 29833
+game_count = 6000
+global_step = 122,229
 batch_size = 16
-validation = True
+validation = False
 
 if torch.backends.mps.is_available():
     device = torch.device("mps")
@@ -61,6 +61,8 @@ def main():
         
         for epoch in range(20):
             for folder in os.listdir("training_data"):
+                if not Path("training_data/" + folder).is_dir():
+                    continue
                 for file in os.listdir(os.path.join("training_data", folder)):
                     if not str(file).split("-")[0] == "classic":
                         continue
@@ -164,7 +166,6 @@ def validate(writer = None):
                 for move,next_move in zip(game.findall('move'), game.findall('move')[1:]):
                     obs = env.step(move.get("source") + "-" + move.get("target"))
                     probability_engine.step(obs)
-                    print(env.generate_website_board())
                     current_batch[current_batch_size] = probability_engine.generate_input(obs['current_player'])
                     current_policy_labels[current_batch_size] = stratego_env.gravon_to_policy(next_move.get("source"),next_move.get("target"))
 
