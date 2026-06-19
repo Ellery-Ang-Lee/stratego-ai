@@ -5,7 +5,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&display=swap" rel="stylesheet">
-    
+
+    <script src="https://cdn.jsdelivr.net/npm/@hiseb/confetti@2.1.0/dist/confetti.min.js"></script>
+
     <link rel="icon" href="./redfavicon.ico">
 
 
@@ -40,7 +42,7 @@
             grid-template-rows: repeat(10, 1fr);
             gap: 1px;
             aspect-ratio: 1 / 1;
-            height: 90vh;
+            height: 88vh;
         }
 
         .cell {
@@ -74,6 +76,11 @@
         .cell.selected::after {
             opacity: 1;
             background-color: rgba(255, 255, 0, 0.6);
+        }
+
+        .cell.highlighted::after {
+            opacity: 1;
+            background-color: rgba(255, 255, 0, 0.4);
         }
     </style>
     <div id="controls">
@@ -109,6 +116,8 @@
         let game = "GMDEDEGBBFEDHEBGBEGDIJCJIDDIBDFHKLFHDBHFAA__AA__AAAA__AA__AAPPUXPRWUNNPQTRUTPQRSSTNVPPOVNRQNYNSQSPTQ";
 
         let revealed = -1;
+
+        let selected = -1;
 
         const board = document.getElementById('board');
         for (let i = 0; i < 100; i++) {
@@ -239,7 +248,7 @@
                     }
                 }
 
-                if (selected) {
+                if (selected >= 0) {
                     for (let j = 0; j < 100; j++) {
                         document.getElementById("cell" + j).classList.remove("selected");
                     }
@@ -249,6 +258,8 @@
                     } else {
                         ws.send(JSON.stringify({ type: "move", data: `${99 - selected},${99 - i}` }));
                     }
+
+                    selected = -1;
                 }
 
                 return;
@@ -293,6 +304,11 @@
             connect();
         }
 
+        function heavyconfetti(x, y, intensity) {
+            for (var i = 0; i < intensity; i++)
+                confetti({ position: { x: window.innerWidth * x, y: window.innerHeight * y } })
+        }
+
         function connect() {
             if (reconnectTimer) {
                 clearTimeout(reconnectTimer);
@@ -315,7 +331,17 @@
                 if (json) {
                     switch (json.type) {
                         case "game":
+                            let lastgame = game;
                             game = json.data.split("").reverse().join("")
+
+                            for (var i = 0; i < 100; i++) {
+                                if (lastgame[i] !== game[i]) {
+                                    document.getElementById("cell" + (redteam ? 99 - i : i)).classList.add("highlighted");
+                                } else {
+                                    document.getElementById("cell" + (redteam ? 99 - i : i)).classList.remove("highlighted");
+                                }
+                            }
+
                             render();
                             break;
                         case "turn":
@@ -334,6 +360,16 @@
                                 alert("Invalid Move!");
                             } else {
                                 move(json.data.split(",")[0], json.data.split(",")[1]);
+                            }
+                            break;
+                        case "win":
+                            if ((json.data == "red") == document.getElementById("redteam").checked) {
+                                setTimeout(() => { heavyconfetti(0.25, 0.25, 20) }, 1000);
+                                setTimeout(() => { heavyconfetti(0.75, 0.50, 20) }, 1500);
+                                setTimeout(() => { heavyconfetti(0.35, 0.75, 20) }, 2000);
+                                document.getElementById("turn").innerText = "You Win!"
+                            } else {
+                                document.getElementById("turn").innerText = "You Lost :("
                             }
                             break;
                         default:
@@ -355,7 +391,7 @@
 
             ws.onclose = () => {
                 console.log("Websocket Closed, reconnecting...");
-                setStatus("Reconnecting...");
+                setStatus("Connecting...");
                 reconnectTimer = setTimeout(connect, 2000);
             }
 
@@ -366,6 +402,7 @@
         }
 
         connect();
+
     </script>
 </body>
 
