@@ -1,1 +1,6 @@
+models/ filter=lfs diff=lfs merge=lfs -text
+models/3-4000 filter=lfs diff=lfs merge=lfs -text
+models/4-1000 filter=lfs diff=lfs merge=lfs -text
+models/4-1500 filter=lfs diff=lfs merge=lfs -text
+models/4-500 filter=lfs diff=lfs merge=lfs -text
 models/* filter=lfs diff=lfs merge=lfs -text
