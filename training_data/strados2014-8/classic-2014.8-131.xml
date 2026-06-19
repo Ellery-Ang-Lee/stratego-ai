@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<stratego>
+ <game type="classic">
+  
+  <field content="BDGEEDDBDDFJBDEDFCMGGBBHEHDIHHJLIKFIFEBGAA__AA__AAAA__AA__AAPTPQSQVTPSNTYQXPQNSUPPPNURVRURONNSWQRTPN"/>
+  <player id="1">Player 1</player>
+  <player id="2">Player 2</player>
+  <result type="4" winner="1"/>
+ </game>
+</stratego>

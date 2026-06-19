@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<stratego>
+ <game type="classic">
+  
+  <field content="MBDEDDEBFDBEEDEDJHBIILHDGKBFFGGHJCHFIBGDAA__AA__AAAA__AA__AARPSUPTOWPPPNRNSXVPTPPRNQVQUTUSNRNSNQTYQQ"/>
+  <move id="1" source="A4" target="A5"/>
+  <move id="2" source="E7" target="E4"/>
+  <move id="3" source="F4" target="F5"/>
+  <move id="4" source="F7" target="F6"/>
+  <move id="5" source="F3" target="F4"/>
+  <move id="6" source="F8" target="F7"/>
+  <move id="7" source="A5" target="A6"/>
+  <move id="8" source="F7" target="E7"/>
+  <move id="9" source="A6" target="A7"/>
+  <move id="10" source="B7" target="B4"/>
+  <move id="11" source="A7" target="A6"/>
+  <move id="12" source="E7" target="E6"/>
+  <move id="13" source="A6" target="A5"/>
+  <move id="14" source="E6" target="E5"/>
+  <move id="15" source="A5" target="A4"/>
+  <move id="16" source="F6" target="F5"/>
+  <move id="17" source="E3" target="F3"/>
+  <move id="18" source="E5" target="E4"/>
+  <move id="19" source="D4" target="E4"/>
+  <player id="1">Player 1</player>
+  <player id="2">Player 2</player>
+  <result type="3" winner="1"/>
+ </game>
+</stratego>

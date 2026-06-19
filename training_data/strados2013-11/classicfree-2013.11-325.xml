@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<stratego>
+ <game type="classicfree">
+  
+  <field content="AAAAAMAAAAAAAAAAAAAAAAAAAAAAAAJAAALAAAKAAU__AU__AUAA__AA__AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYAAAAA"/>
+  <player id="1">Player 1</player>
+  <player id="2">Player 2</player>
+  <result type="12" winner="1"/>
+ </game>
+</stratego>

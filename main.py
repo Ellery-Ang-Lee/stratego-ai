@@ -56,6 +56,14 @@ async def process(websocket):
                     time.sleep(2)
 
                 broadcast(connections, json.dumps(generate_payload("game", state)))
+
+                if obs['winner'] is not None:
+                    if obs['winner'] == 0:
+                        broadcast(connections, json.dumps(generate_payload("win", "red")))
+                    else:
+                        broadcast(connections, json.dumps(generate_payload("win", "blue")))
+
+
             except ValueError:
                 broadcast(connections, json.dumps(generate_payload("move", "invalid"))) 
         elif message["type"] == "turn":
@@ -91,7 +99,13 @@ async def process(websocket):
 
                 broadcast(connections, json.dumps(generate_payload("game", state)))
 
-                broadcast(connections, json.dumps(generate_payload("turn", "red")))
+                if obs['winner'] is not None:
+                    if obs['winner'] == 0:
+                        broadcast(connections, json.dumps(generate_payload("win", "red")))
+                    else:
+                        broadcast(connections, json.dumps(generate_payload("win", "blue")))
+                else:
+                    broadcast(connections, json.dumps(generate_payload("turn", "red")))
 
 def generate_payload(type, data):
     return {

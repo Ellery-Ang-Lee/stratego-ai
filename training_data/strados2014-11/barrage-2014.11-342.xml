@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<stratego>
+ <game type="barrage">
+  
+  <field content="AAALMEBAAAAAAAAAAAAAAAAAAAAAAADDAAAAAACKAA__AA__AAAA__AA__AAWNAPXPAAAAAAAAAAAAAAOAAAAAAAAAYQAAAAAAAA"/>
+  <move id="1" source="I4" target="H4"/>
+  <move id="2" source="E7" target="E6"/>
+  <move id="3" source="H4" target="G4"/>
+  <move id="4" source="E6" target="E5"/>
+  <move id="5" source="G4" target="F4"/>
+  <move id="6" source="F7" target="F4"/>
+  <move id="7" source="B4" target="F4"/>
+  <move id="8" source="E5" target="E4"/>
+  <move id="9" source="D1" target="D2"/>
+  <move id="10" source="E4" target="E3"/>
+  <move id="11" source="K4" target="I4"/>
+  <move id="12" source="E3" target="E2"/>
+  <move id="13" source="D2" target="E2"/>
+  <move id="14" source="A7" target="A6"/>
+  <move id="15" source="A4" target="F4"/>
+  <move id="16" source="A6" target="A5"/>
+  <move id="17" source="F4" target="F9"/>
+  <move id="18" source="D7" target="D9"/>
+  <move id="19" source="F9" target="F8"/>
+  <move id="20" source="D9" target="D8"/>
+  <move id="21" source="F8" target="F9"/>
+  <move id="22" source="D8" target="D9"/>
+  <move id="23" source="F9" target="F:"/>
+  <move id="24" source="A5" target="A4"/>
+  <move id="25" source="I4" target="H4"/>
+  <move id="26" source="A4" target="B4"/>
+  <move id="27" source="H4" target="G4"/>
+  <move id="28" source="B4" target="C4"/>
+  <move id="29" source="G4" target="F4"/>
+  <move id="30" source="C4" target="D4"/>
+  <move id="31" source="F4" target="E4"/>
+  <move id="32" source="D4" target="E4"/>
+  <move id="33" source="F1" target="F2"/>
+  <move id="34" source="D9" target="E9"/>
+  <move id="35" source="F2" target="E2"/>
+  <move id="36" source="E9" target="F9"/>
+  <move id="37" source="F:" target="E:"/>
+  <move id="38" source="F9" target="F1"/>
+  <move id="39" source="E2" target="F2"/>
+  <move id="40" source="F1" target="E1"/>
+  <player id="1">Player 1</player>
+  <player id="2">Player 2</player>
+  <result type="1" winner="2"/>
+ </game>
+</stratego>

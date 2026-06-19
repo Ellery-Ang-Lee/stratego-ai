@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<stratego>
+ <game type="barrage">
+  
+  <field content="AAAAAKAADAAAAAMAAAAADAAAAABAAAALAAEAACAAAA__AA__AAAA__AA__AAWQAAYPAAXPOAAAAAAAAAAAAAAAAAAAAAAAAANAAA"/>
+  <move id="1" source="I1" target="I7"/>
+  <move id="2" source="K7" target="K2"/>
+  <move id="3" source="F1" target="F2"/>
+  <move id="4" source="K2" target="K3"/>
+  <move id="5" source="H4" target="I4"/>
+  <move id="6" source="K3" target="G3"/>
+  <move id="7" source="E4" target="E5"/>
+  <move id="8" source="I7" target="I6"/>
+  <move id="9" source="E5" target="E6"/>
+  <move id="10" source="I6" target="I5"/>
+  <move id="11" source="E6" target="E7"/>
+  <player id="1">Player 1</player>
+  <player id="2">Player 2</player>
+  <result type="1" winner="1"/>
+ </game>
+</stratego>

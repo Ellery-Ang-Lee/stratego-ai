@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<stratego>
+ <game type="barrage">
+  
+  <field content="AAAAAAAAEMAAAAAAAACAAAKDDABLAAAAAAAAAAAAAA__AA__AAAA__AA__AAANAAAAAPQAAAAYAAAPAAAXAWAAAAAAAAAAOAAAAA"/>
+  <move id="1" source="H3" target="H4"/>
+  <move id="2" source="H7" target="G7"/>
+  <move id="3" source="E3" target="E4"/>
+  <move id="4" source="G7" target="F7"/>
+  <move id="5" source="E4" target="E5"/>
+  <move id="6" source="F7" target="F1"/>
+  <move id="7" source="H4" target="I4"/>
+  <move id="8" source="F1" target="I1"/>
+  <move id="9" source="I4" target="I5"/>
+  <move id="10" source="B9" target="B8"/>
+  <move id="11" source="I5" target="I6"/>
+  <move id="12" source="B8" target="A8"/>
+  <move id="13" source="E5" target="E6"/>
+  <move id="14" source="A8" target="A7"/>
+  <move id="15" source="E6" target="E7"/>
+  <move id="16" source="A7" target="A6"/>
+  <move id="17" source="E7" target="B7"/>
+  <move id="18" source="A6" target="A5"/>
+  <move id="19" source="I6" target="I7"/>
+  <move id="20" source="A5" target="A4"/>
+  <move id="21" source="C3" target="B3"/>
+  <move id="22" source="D9" target="E9"/>
+  <move id="23" source="D3" target="D4"/>
+  <move id="24" source="E9" target="E8"/>
+  <move id="25" source="D4" target="E4"/>
+  <move id="26" source="E8" target="E7"/>
+  <move id="27" source="E4" target="E5"/>
+  <move id="28" source="E7" target="E6"/>
+  <move id="29" source="E5" target="F5"/>
+  <move id="30" source="E6" target="E5"/>
+  <move id="31" source="F5" target="F8"/>
+  <move id="32" source="H8" target="F8"/>
+  <move id="33" source="I7" target="H7"/>
+  <move id="34" source="E5" target="E4"/>
+  <move id="35" source="H7" target="G7"/>
+  <move id="36" source="E4" target="E3"/>
+  <move id="37" source="G7" target="F7"/>
+  <move id="38" source="E3" target="F3"/>
+  <move id="39" source="F7" target="E7"/>
+  <move id="40" source="F3" target="G3"/>
+  <move id="41" source="E7" target="D7"/>
+  <move id="42" source="A4" target="B4"/>
+  <move id="43" source="D7" target="D8"/>
+  <player id="1">Player 1</player>
+  <player id="2">Player 2</player>
+  <result type="1" winner="1"/>
+ </game>
+</stratego>

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<stratego>
+ <game type="barrage">
+  
+  <field content="CAAAAAAAADEKAAAAAADMBAAAAAAAALAAAAAAAAAAAA__AA__AAAA__AA__AAXNAAOAAAAAWAAAAAAAAAQPAAAAAAAAYPAAAAAAAA"/>
+  <move id="1" source="I2" target="I3"/>
+  <move id="2" source="A7" target="A6"/>
+  <move id="3" source="I3" target="I4"/>
+  <move id="4" source="A6" target="A5"/>
+  <move id="5" source="I4" target="I5"/>
+  <move id="6" source="A8" target="A7"/>
+  <move id="7" source="I5" target="I6"/>
+  <move id="8" source="A5" target="A4"/>
+  <move id="9" source="I6" target="I7"/>
+  <move id="10" source="A4" target="A3"/>
+  <move id="11" source="I7" target="I8"/>
+  <move id="12" source="A7" target="A6"/>
+  <move id="13" source="I8" target="H8"/>
+  <move id="14" source="A6" target="A5"/>
+  <move id="15" source="H8" target="G8"/>
+  <move id="16" source="A5" target="B5"/>
+  <move id="17" source="G8" target="G9"/>
+  <move id="18" source="B5" target="B4"/>
+  <move id="19" source="G9" target="B9"/>
+  <move id="20" source="B4" target="B3"/>
+  <move id="21" source="B2" target="B3"/>
+  <move id="22" source="A9" target="A8"/>
+  <move id="23" source="K1" target="E1"/>
+  <move id="24" source="A8" target="A7"/>
+  <move id="25" source="E1" target="E7"/>
+  <move id="26" source="B:" target="B9"/>
+  <move id="27" source="E7" target="E8"/>
+  <move id="28" source="A7" target="A6"/>
+  <move id="29" source="E8" target="E7"/>
+  <move id="30" source="A6" target="A5"/>
+  <move id="31" source="E7" target="B7"/>
+  <move id="32" source="A5" target="A4"/>
+  <move id="33" source="K3" target="K4"/>
+  <move id="34" source="A4" target="A3"/>
+  <move id="35" source="A2" target="A3"/>
+  <move id="36" source="B9" target="A9"/>
+  <move id="37" source="K4" target="K5"/>
+  <move id="38" source="A9" target="A1"/>
+  <move id="39" source="K5" target="K6"/>
+  <move id="40" source="A1" target="A2"/>
+  <move id="41" source="K6" target="K7"/>
+  <move id="42" source="A2" target="K2"/>
+  <player id="1">Player 1</player>
+  <player id="2">Player 2</player>
+  <result type="1" winner="2"/>
+ </game>
+</stratego>

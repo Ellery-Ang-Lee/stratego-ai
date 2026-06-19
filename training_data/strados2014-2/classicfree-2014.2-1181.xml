@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<stratego>
+ <game type="classicfree">
+  
+  <field content="AFAAAAAABMBBAAAAAAABAAAAAAAAAAAAAAAAAAAAAA__AA__AAAA__AA__AAAAAAAAAAAAAAAAAAAAAAAAAANAAAAAAAANYNRAAA"/>
+  <move id="1" source="B1" target="A1"/>
+  <move id="2" source="G:" target="G9"/>
+  <move id="3" source="A1" target="B1"/>
+  <move id="4" source="G9" target="G8"/>
+  <move id="5" source="B1" target="A1"/>
+  <player id="1">Player 1</player>
+  <player id="2">Player 2</player>
+  <result type="0" winner="2"/>
+ </game>
+</stratego>

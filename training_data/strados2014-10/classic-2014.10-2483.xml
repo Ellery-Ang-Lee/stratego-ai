@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<stratego>
+ <game type="classic">
+  
+  <field content="MBEHDIIEFGBFEDDDDDDDFBBJGLECKJBGGHHBIHFEAA__AA__AAAA__AA__AAUPSWPTQVSTPTRSPPOVPXRNNUPNNQRTNQSRPQQUNY"/>
+  <move id="1" source="E4" target="E5"/>
+  <move id="2" source="A7" target="A6"/>
+  <move id="3" source="E3" target="E4"/>
+  <move id="4" source="A6" target="A5"/>
+  <move id="5" source="E5" target="F5"/>
+  <player id="1">Player 1</player>
+  <player id="2">Player 2</player>
+  <result type="3" winner="1"/>
+ </game>
+</stratego>

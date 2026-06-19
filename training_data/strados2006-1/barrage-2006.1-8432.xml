@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<stratego>
+ <game type="barrage">
+  
+  <field content="DAAAAAABEMDAAAAAAAKCAAAAAAAAALAAAAAAAAAAAA__AA__AAAA__AA__AAWAAAPAAAAXAAAAAAAAAAAAAAAAAAAAYAAQAPAOAN"/>
+  <move id="1" source="A2" target="B2"/>
+  <move id="2" source="E7" target="E6"/>
+  <move id="3" source="B2" target="B8"/>
+  <move id="4" source="E6" target="E5"/>
+  <move id="5" source="B8" target="D8"/>
+  <move id="6" source="E5" target="E4"/>
+  <move id="7" source="D8" target="D:"/>
+  <move id="8" source="E4" target="E3"/>
+  <move id="9" source="A1" target="B1"/>
+  <move id="10" source="E3" target="F3"/>
+  <move id="11" source="B1" target="B8"/>
+  <move id="12" source="F3" target="G3"/>
+  <move id="13" source="B8" target="H8"/>
+  <move id="14" source="G3" target="G2"/>
+  <move id="15" source="H8" target="H:"/>
+  <move id="16" source="F:" target="H:"/>
+  <move id="17" source="K3" target="K4"/>
+  <move id="18" source="G2" target="G3"/>
+  <move id="19" source="K4" target="K5"/>
+  <move id="20" source="G3" target="H3"/>
+  <move id="21" source="K5" target="I5"/>
+  <move id="22" source="H3" target="H4"/>
+  <move id="23" source="I5" target="I6"/>
+  <move id="24" source="H4" target="I4"/>
+  <move id="25" source="I6" target="I5"/>
+  <move id="26" source="I4" target="K4"/>
+  <move id="27" source="I5" target="I4"/>
+  <move id="28" source="K4" target="K5"/>
+  <move id="29" source="I4" target="K4"/>
+  <move id="30" source="K5" target="I5"/>
+  <move id="31" source="K4" target="K5"/>
+  <move id="32" source="I5" target="I6"/>
+  <move id="33" source="I2" target="H2"/>
+  <move id="34" source="I6" target="I1"/>
+  <move id="35" source="H2" target="G2"/>
+  <move id="36" source="K7" target="K6"/>
+  <move id="37" source="K5" target="K6"/>
+  <move id="38" source="A7" target="B7"/>
+  <move id="39" source="G2" target="H2"/>
+  <move id="40" source="B7" target="C7"/>
+  <move id="41" source="H2" target="I2"/>
+  <move id="42" source="C7" target="D7"/>
+  <move id="43" source="K2" target="K3"/>
+  <move id="44" source="D7" target="E7"/>
+  <move id="45" source="K3" target="K4"/>
+  <move id="46" source="E7" target="F7"/>
+  <move id="47" source="K4" target="K5"/>
+  <move id="48" source="F7" target="G7"/>
+  <move id="49" source="K5" target="K6"/>
+  <move id="50" source="G7" target="H7"/>
+  <move id="51" source="K6" target="K7"/>
+  <move id="52" source="H7" target="I7"/>
+  <move id="53" source="K7" target="K8"/>
+  <move id="54" source="I7" target="I8"/>
+  <move id="55" source="K8" target="K9"/>
+  <move id="56" source="I8" target="I9"/>
+  <move id="57" source="K9" target="K:"/>
+  <move id="58" source="I9" target="I8"/>
+  <move id="59" source="I2" target="H2"/>
+  <move id="60" source="I8" target="I7"/>
+  <move id="61" source="H2" target="H3"/>
+  <move id="62" source="I7" target="I6"/>
+  <move id="63" source="H3" target="H4"/>
+  <move id="64" source="I6" target="I5"/>
+  <move id="65" source="H4" target="I4"/>
+  <move id="66" source="I5" target="I4"/>
+  <move id="67" source="I1" target="I2"/>
+  <move id="68" source="D:" target="D9"/>
+  <move id="69" source="I2" target="H2"/>
+  <move id="70" source="D9" target="E9"/>
+  <move id="71" source="H2" target="H3"/>
+  <move id="72" source="E9" target="F9"/>
+  <move id="73" source="H3" target="H4"/>
+  <move id="74" source="F9" target="F8"/>
+  <move id="75" source="H4" target="G4"/>
+  <move id="76" source="F8" target="G8"/>
+  <move id="77" source="G4" target="F4"/>
+  <move id="78" source="G8" target="H8"/>
+  <move id="79" source="F4" target="E4"/>
+  <move id="80" source="H8" target="I8"/>
+  <move id="81" source="E4" target="F4"/>
+  <move id="82" source="I8" target="I7"/>
+  <move id="83" source="F4" target="G4"/>
+  <move id="84" source="I7" target="I6"/>
+  <move id="85" source="G4" target="H4"/>
+  <move id="86" source="I6" target="I5"/>
+  <move id="87" source="H4" target="I4"/>
+  <move id="88" source="I5" target="K5"/>
+  <move id="89" source="I4" target="K4"/>
+  <move id="90" source="K5" target="K4"/>
+  <player id="1">Player 1</player>
+  <player id="2">Player 2</player>
+  <result type="2" winner="3"/>
+ </game>
+</stratego>

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<stratego>
+ <game type="classicfree">
+  
+  <field content="AAAABMBBAAAAAAABABAKAAAAAAABAXAAAAAAAAAAAA__AA__AAAA__AA__AAAAAAAAAAAAAAAAAAANALAAAANAANWAAAANYNANAA"/>
+  <move id="1" source="K8" target="I8"/>
+  <move id="2" source="I9" target="K9"/>
+  <move id="3" source="I8" target="K8"/>
+  <move id="4" source="K9" target="I9"/>
+  <move id="5" source="K8" target="I8"/>
+  <move id="6" source="I9" target="K9"/>
+  <move id="7" source="K2" target="I2"/>
+  <move id="8" source="K3" target="I3"/>
+  <move id="9" source="I2" target="K2"/>
+  <move id="10" source="I3" target="K3"/>
+  <move id="11" source="K2" target="I2"/>
+  <move id="12" source="K3" target="I3"/>
+  <move id="13" source="I8" target="K8"/>
+  <move id="14" source="K9" target="I9"/>
+  <move id="15" source="K8" target="I8"/>
+  <move id="16" source="I9" target="K9"/>
+  <move id="17" source="I2" target="K2"/>
+  <move id="18" source="I3" target="K3"/>
+  <move id="19" source="K2" target="I2"/>
+  <move id="20" source="K3" target="I3"/>
+  <move id="21" source="I2" target="K2"/>
+  <move id="22" source="I3" target="K3"/>
+  <move id="23" source="I8" target="K8"/>
+  <move id="24" source="K9" target="I9"/>
+  <move id="25" source="K2" target="I2"/>
+  <move id="26" source="K3" target="I3"/>
+  <move id="27" source="K8" target="I8"/>
+  <move id="28" source="I3" target="I2"/>
+  <move id="29" source="I8" target="I9"/>
+  <move id="30" source="I2" target="H2"/>
+  <player id="1">Player 1</player>
+  <player id="2">Player 2</player>
+  <result type="0" winner="1"/>
+ </game>
+</stratego>

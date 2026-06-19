@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<stratego>
+ <game type="classic">
+  
+  <field content="MFEBEBFBDBIGDEGIEIGDLGJDHKJDBFHHEDDHCBFDAA__AA__AAAA__AA__AATPWSNNRPNNPTXSTRPUTRSUOUVRPQPQQVNYNSQPQP"/>
+  <move id="1" source="B4" target="B5"/>
+  <move id="2" source="B7" target="B5"/>
+  <move id="3" source="B5" target="B6"/>
+  <move id="4" source="A7" target="A6"/>
+  <move id="5" source="B6" target="A6"/>
+  <move id="6" source="A8" target="A4"/>
+  <move id="7" source="B3" target="B4"/>
+  <move id="8" source="B8" target="B7"/>
+  <move id="9" source="B4" target="B5"/>
+  <move id="10" source="B9" target="B8"/>
+  <move id="11" source="B5" target="B6"/>
+  <move id="12" source="B8" target="A8"/>
+  <move id="13" source="B6" target="B7"/>
+  <move id="14" source="A8" target="A7"/>
+  <move id="15" source="C3" target="B3"/>
+  <move id="16" source="A7" target="A6"/>
+  <move id="17" source="B3" target="B4"/>
+  <move id="18" source="A6" target="A5"/>
+  <move id="19" source="B4" target="B5"/>
+  <move id="20" source="A5" target="A4"/>
+  <move id="21" source="A3" target="A4"/>
+  <move id="22" source="C9" target="B9"/>
+  <move id="23" source="A4" target="A5"/>
+  <move id="24" source="A9" target="A8"/>
+  <move id="25" source="A5" target="A6"/>
+  <move id="26" source="B9" target="A9"/>
+  <move id="27" source="B5" target="B6"/>
+  <move id="28" source="C8" target="C9"/>
+  <move id="29" source="A6" target="A7"/>
+  <move id="30" source="D8" target="C8"/>
+  <move id="31" source="A7" target="A8"/>
+  <move id="32" source="A9" target="A8"/>
+  <move id="33" source="B6" target="B7"/>
+  <player id="1">Player 1</player>
+  <player id="2">Player 2</player>
+  <result type="3" winner="2"/>
+ </game>
+</stratego>

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<stratego>
+ <game type="barrage">
+  
+  <field content="MDDAAAAAAABKAAAAAAAALCAAAAAAAAAAAAEAAAAAAA__AA__AAAA__AA__AAWXAAAAAAAAOQAAAAAAAAPPAAAAAAAAYNAAAAAAAA"/>
+  <move id="1" source="E4" target="D4"/>
+  <move id="2" source="B7" target="B6"/>
+  <move id="3" source="D4" target="C4"/>
+  <move id="4" source="B6" target="B5"/>
+  <move id="5" source="C4" target="D4"/>
+  <move id="6" source="B5" target="B4"/>
+  <move id="7" source="B3" target="B4"/>
+  <move id="8" source="A7" target="A6"/>
+  <move id="9" source="B4" target="A4"/>
+  <move id="10" source="A6" target="A5"/>
+  <move id="11" source="B2" target="B3"/>
+  <move id="12" source="A5" target="A4"/>
+  <move id="13" source="A3" target="A4"/>
+  <move id="14" source="B9" target="F9"/>
+  <move id="15" source="D4" target="C4"/>
+  <move id="16" source="F9" target="F2"/>
+  <move id="17" source="C4" target="B4"/>
+  <move id="18" source="F2" target="A2"/>
+  <move id="19" source="B4" target="B5"/>
+  <move id="20" source="B8" target="B7"/>
+  <move id="21" source="B5" target="B6"/>
+  <move id="22" source="B7" target="B6"/>
+  <move id="23" source="B3" target="A3"/>
+  <move id="24" source="A8" target="A7"/>
+  <move id="25" source="B1" target="B:"/>
+  <move id="26" source="A9" target="E9"/>
+  <move id="27" source="A4" target="B4"/>
+  <move id="28" source="E9" target="E2"/>
+  <move id="29" source="C1" target="B1"/>
+  <move id="30" source="E2" target="B2"/>
+  <move id="31" source="A3" target="A4"/>
+  <move id="32" source="B2" target="E2"/>
+  <move id="33" source="A4" target="A5"/>
+  <player id="1">Player 1</player>
+  <player id="2">Player 2</player>
+  <result type="3" winner="1"/>
+ </game>
+</stratego>

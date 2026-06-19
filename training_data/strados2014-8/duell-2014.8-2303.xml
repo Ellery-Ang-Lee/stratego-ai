@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<stratego>
+ <game type="duell">
+  
+  <field content="AAAAAAAAAAAAAAAAAAAAAAAACLAAEDMAAEKDAABBAA__AA__AAAA__AA__AAPPAANQONXQAAAAAWAAYAAAAAAAAAAAAAAAAAAAAA"/>
+  <move id="1" source="E4" target="E5"/>
+  <move id="2" source="A7" target="A4"/>
+  <player id="1">Player 1</player>
+  <player id="2">Player 2</player>
+  <result type="1" winner="2"/>
+ </game>
+</stratego>

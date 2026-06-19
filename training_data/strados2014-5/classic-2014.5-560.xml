@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<stratego>
+ <game type="classic">
+  
+  <field content="EHEIEJBFBMHDEDEDDBFBLHGHGJCKBFGDIFDDGIDBAA__AA__AAAA__AA__AATNRVXWQPVRNSQSUUUOPTPPSNQTTSQNPPNRPPQRNY"/>
+  <move id="1" source="F4" target="F7"/>
+  <move id="2" source="F7" target="F6"/>
+  <move id="3" source="E4" target="E5"/>
+  <move id="4" source="F6" target="F5"/>
+  <move id="5" source="E3" target="E4"/>
+  <move id="6" source="F5" target="F4"/>
+  <move id="7" source="F3" target="E3"/>
+  <move id="8" source="F4" target="E4"/>
+  <move id="9" source="B4" target="B5"/>
+  <move id="10" source="E4" target="E3"/>
+  <move id="11" source="B3" target="B4"/>
+  <move id="12" source="E3" target="E2"/>
+  <move id="13" source="B5" target="B6"/>
+  <move id="14" source="E2" target="E1"/>
+  <move id="15" source="B4" target="B5"/>
+  <move id="16" source="E1" target="F1"/>
+  <move id="17" source="C4" target="B4"/>
+  <move id="18" source="F1" target="F2"/>
+  <move id="19" source="G4" target="F4"/>
+  <move id="20" source="F2" target="F3"/>
+  <move id="21" source="G3" target="G4"/>
+  <move id="22" source="F3" target="F4"/>
+  <move id="23" source="G4" target="G3"/>
+  <move id="24" source="F4" target="F3"/>
+  <move id="25" source="E5" target="E6"/>
+  <move id="26" source="F3" target="G3"/>
+  <move id="27" source="H3" target="G3"/>
+  <move id="28" source="E7" target="E6"/>
+  <move id="29" source="C3" target="C4"/>
+  <move id="30" source="E6" target="E5"/>
+  <move id="31" source="G2" target="G3"/>
+  <move id="32" source="E5" target="E4"/>
+  <move id="33" source="D3" target="E3"/>
+  <move id="34" source="I7" target="I6"/>
+  <move id="35" source="A3" target="B3"/>
+  <move id="36" source="I6" target="I5"/>
+  <move id="37" source="B3" target="C3"/>
+  <move id="38" source="I5" target="I4"/>
+  <move id="39" source="C3" target="D3"/>
+  <move id="40" source="I4" target="H4"/>
+  <move id="41" source="C2" target="C3"/>
+  <move id="42" source="I8" target="I3"/>
+  <move id="43" source="D2" target="C2"/>
+  <move id="44" source="E4" target="E3"/>
+  <move id="45" source="D3" target="D2"/>
+  <move id="46" source="D7" target="E7"/>
+  <move id="47" source="D1" target="E1"/>
+  <move id="48" source="E7" target="E6"/>
+  <move id="49" source="E1" target="F1"/>
+  <move id="50" source="E6" target="E5"/>
+  <move id="51" source="D2" target="D3"/>
+  <move id="52" source="E5" target="E4"/>
+  <move id="53" source="C3" target="B3"/>
+  <move id="54" source="I9" target="I8"/>
+  <move id="55" source="C4" target="C3"/>
+  <move id="56" source="I8" target="I7"/>
+  <move id="57" source="D4" target="C4"/>
+  <move id="58" source="E3" target="D3"/>
+  <move id="59" source="G3" target="H3"/>
+  <move id="60" source="E4" target="E3"/>
+  <player id="1">Player 1</player>
+  <player id="2">Player 2</player>
+  <result type="3" winner="2"/>
+ </game>
+</stratego>
