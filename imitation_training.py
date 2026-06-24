@@ -48,7 +48,7 @@ def main():
         writer = SummaryWriter("runs/experiment_" + version)
 
         if any(Path("models").iterdir()):
-            newist = max([f for f in Path("models").iterdir() if f.is_file()], key=lambda f: f.stat().st_mtime)
+            newist = max([f for f in Path("models").iterdir() if f  .is_file()], key=lambda f: f.stat().st_mtime)
             print(str(newist).split("/")[1][0])
             if str(newist).split("/")[1][0] == version:
                 print("loading model: " + str(newist))

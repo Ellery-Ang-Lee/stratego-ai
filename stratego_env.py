@@ -74,7 +74,7 @@ PIECE_COUNTS = {
     GENERAL:1, MARSHAL:1, BOMB:6,
 }
 
-DRAW_MOVE_LIMIT = 400
+DRAW_MOVE_LIMIT = 100
 
 _COLS = 'ABCDEFGHIK' #skipping j bc gravon is bad
 
@@ -82,7 +82,7 @@ next_id = 0
 
 def encode_piece(player, rank):
     #convert from player and rank to cell values
-    temp = piece(player, rank if player == RED else -rank)
+    temp = Piece(player, rank if player == RED else -rank)
     if rank == EMPTY or rank == LAKE:
         temp.revealed = True
     return temp
@@ -131,7 +131,7 @@ class StrategoEnv:
     def reset(self, red_setup: str = None, blue_setup: str = None):
         #setup mapping (row, col) to rank in a dict. None for random
 
-        self.board = np.zeros((10, 10), dtype=piece)
+        self.board = np.zeros((10, 10), dtype=Piece)
         #self.revealed = np.zeros((10, 10), dtype=bool)
         #self.moved = np.zeros((10, 10), dtype=bool)
         self.current_player = RED
@@ -212,7 +212,7 @@ class StrategoEnv:
 
         if not self.done:
             self.current_player = 1 - self.current_player
-            self.move_count    += 1
+            self.move_count += 1
 
             if not self._has_legal_moves():
                 self.done   = True
@@ -222,7 +222,7 @@ class StrategoEnv:
         if not self.done and self.no_capture_count >= DRAW_MOVE_LIMIT:
             self.done = True
             self.winner = None
-            reward = 0.0
+            reward = 0
 
         return {
             **self._observe(),
@@ -411,7 +411,7 @@ class StrategoEnv:
             raise ValueError(f"Unsupported action type: {type(action)}")
         return fr, fc, tr, tc
     
-class piece:
+class Piece:
     def __init__(self, player, rank, moved=False, revealed=False):
         global next_id
         self.id = next_id
