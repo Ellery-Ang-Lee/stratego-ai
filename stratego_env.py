@@ -348,10 +348,10 @@ class StrategoEnv:
                         nr, nc = r + dr, c + dc
                         while 0 <= nr < 10 and 0 <= nc < 10:
                             target = self.board[nr, nc]
-                            if target.rank == LAKE:
+                            if cell_rank(target) == LAKE:
                                 break
                             to_pos = rc_to_pos(nr, nc)
-                            if target.rank == EMPTY:
+                            if cell_rank(target) == EMPTY:
                                 actions.add(from_pos * 100 + to_pos)
                                 nr += dr
                                 nc += dc
@@ -365,9 +365,9 @@ class StrategoEnv:
                         if not (0 <= nr < 10 and 0 <= nc < 10):
                             continue
                         target = self.board[nr, nc]
-                        if target.rank == LAKE:
+                        if cell_rank(target) == LAKE:
                             continue
-                        if target.rank == EMPTY or cell_player(target) != self.current_player:
+                        if cell_rank(target) == EMPTY or cell_player(target) != self.current_player:
                             actions.add(from_pos * 100 + rc_to_pos(nr, nc))
 
         return actions
