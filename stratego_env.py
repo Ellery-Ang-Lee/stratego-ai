@@ -233,7 +233,7 @@ class StrategoEnv:
             'move_distance': move_distance,
             'newly_moved_from': not was_moved,
             'newly_revealed_from': not was_revealed_from and combat_outcome is not None,
-            'newly_revealed_to': not was_revealed_to   and combat_outcome is not None,
+            'newly_revealed_to': not was_revealed_to and combat_outcome is not None,
             'combat_outcome': combat_outcome,
             'reward': reward,
             'done': self.done,

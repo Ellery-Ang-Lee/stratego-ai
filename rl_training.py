@@ -35,7 +35,7 @@ optim = torch.optim.Adam(
 drawn_games = 0
 game_length = 0
 
-writer = SummaryWriter("runs/rl-1")
+writer = SummaryWriter("runs/rl-2")
 
 if any(Path("models").iterdir()):
     newist = max([f for f in Path("models").iterdir() if f  .is_file()], key=lambda f: f.stat().st_mtime)
@@ -123,6 +123,38 @@ def play_game():
             obs = env.step(env.action_to_gravon(action))
             probability_engine.step(obs)
 
+            turn['reward'] = 0.0 #win loss signal comes later
+
+            if obs['combat_outcome'] is None:
+                pass
+            elif obs['combat_outcome'] == 'attacker_wins':
+                if not obs['newly_revealed_to']: # defender was already revealed
+                    capture_value = rank_reward(obs['to_piece']) / 1.5
+                else: # defender was hidden
+                    capture_value = rank_reward(obs['to_piece'])
+                
+                if obs['newly_revealed_from']: # attacker got revealed in the process
+                    info_penalty = rank_reward(obs['from_piece']) / 3
+                else:
+                    info_penalty = 0.0
+                
+                turn['reward'] += capture_value - info_penalty
+
+            elif obs['combat_outcome'] == 'defender_wins':
+                if not obs['newly_revealed_from']: # attacker was already revealed
+                    loss_value = rank_reward(obs['from_piece']) / 1.5
+                else: # attacker was hidden
+                    loss_value = rank_reward(obs['from_piece'])
+                
+                if obs['newly_revealed_to']: # defender got revealed in the process
+                    info_penalty = rank_reward(obs['to_piece']) / 3
+                else:
+                    info_penalty = 0.0
+                
+                turn['reward'] -= (loss_value - info_penalty)
+            else:
+                pass #ranks are always the same so its a draw
+
             if obs['done']:
                 done = True
                 winner = obs['winner']
@@ -137,6 +169,10 @@ def play_game():
     
 
     return trajectory, winner
+
+def rank_reward(cell):
+    rank = stratego_env.cell_rank(cell)
+    return [0.00,1.00,0.03,0.01,0.03,0.02,0.03,0.04,0.05,0.07,0.08,0.10,0.03][rank]
 
 def validation_game():
     with torch.no_grad():
@@ -204,6 +240,8 @@ def compute_returns(trajectory, winner, baseline):
             raw_return = 1.0
         else:
             raw_return = -1.0
+
+        raw_return += step['reward']
 
         returns.append(raw_return - baseline)
     
