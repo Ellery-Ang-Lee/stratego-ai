@@ -35,7 +35,7 @@ optim = torch.optim.Adam(
 drawn_games = 0
 game_length = 0
 
-writer = SummaryWriter("runs/rl-2")
+writer = SummaryWriter("runs/rl-4")
 
 if any(Path("models").iterdir()):
     newist = max([f for f in Path("models").iterdir() if f  .is_file()], key=lambda f: f.stat().st_mtime)
@@ -124,6 +124,7 @@ def play_game():
             probability_engine.step(obs)
 
             turn['reward'] = 0.0 #win loss signal comes later
+            turn['no_capture'] = obs['no_capture_count']
 
             if obs['combat_outcome'] is None:
                 pass
@@ -233,20 +234,27 @@ def validation_game():
 def compute_returns(trajectory, winner, baseline):
     returns = []
     current_turn = 0
+    pending = 0
     for step in trajectory:
         if winner is None:
-            raw_return = 0.0
+            raw_return = -0.2
         elif winner == current_turn:
             raw_return = 1.0
         else:
             raw_return = -1.0
 
-        raw_return += step['reward']
+        raw_return += step['reward'] #reward from combat
+        raw_return += pending
+        pending = -step['reward'] #opposite combat reward for other player
+        raw_return -= ((step['no_capture'] / 100) ** 2) * 0.5
+        raw_return -= 0.001 #time pressure
+        
 
         returns.append(raw_return - baseline)
     
         current_turn = 1 - current_turn
-    
+
+    print(returns)
     return returns
     
 
@@ -274,7 +282,8 @@ def train_on_trajectory(trajectory, returns):
     distribution = torch.distributions.Categorical(logits=logits)
     log_probs = distribution.log_prob(actions)
 
-    total_loss = -(log_probs * returns).sum()
+    entropy = distribution.entropy().mean()
+    total_loss = -(log_probs * returns).sum() - 0.005 * entropy
 
     optim.zero_grad()
     total_loss.backward()

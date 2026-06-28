@@ -240,7 +240,8 @@ class StrategoEnv:
             'winner': self.winner,
             'move_count': self.move_count,
             'current_player': self.current_player,
-            'legal_actions_mask': legal_cache
+            'legal_actions_mask': legal_cache,
+            'no_capture_count': self.no_capture_count
         }
 
     def legal_actions(self):
