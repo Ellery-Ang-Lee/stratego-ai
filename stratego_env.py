@@ -74,7 +74,7 @@ PIECE_COUNTS = {
     GENERAL:1, MARSHAL:1, BOMB:6,
 }
 
-DRAW_MOVE_LIMIT = 200
+DRAW_MOVE_LIMIT = 150
 
 _COLS = 'ABCDEFGHIK' #skipping j bc gravon is bad
 

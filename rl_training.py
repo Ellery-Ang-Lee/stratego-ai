@@ -35,7 +35,7 @@ optim = torch.optim.Adam(
 drawn_games = 0
 game_length = 0
 
-writer = SummaryWriter("runs/rl-8")
+writer = SummaryWriter("runs/rl-11")
 
 if any(Path("models").iterdir()):
     newist = max([f for f in Path("models").iterdir() if f  .is_file()], key=lambda f: f.stat().st_mtime)
@@ -49,8 +49,18 @@ def main():
     for epoch in range(10000):
         print("---------- Starting game " + str(epoch) + " ----------")
         trajectory, winner = play_game()
+        print(f"trajectory length: {len(trajectory)}")   # add this
         train_on_trajectory(trajectory, compute_returns(trajectory, winner, 0.0))
+        if device.type == "mps":
+            torch.mps.empty_cache()
         global_step += 1
+
+        if global_step % 50 == 0:
+            writer.add_scalar("Training/draws", drawn_games, global_step)
+            writer.add_scalar("Training/game_length", game_length / 400, global_step)
+
+            drawn_games = 0
+            game_length = 0 
 
         if global_step % 400 == 0:
             torch.save(net.state_dict(), "models/rl-" + str(global_step)) 
@@ -63,11 +73,6 @@ def main():
                 benchmark.load_state_dict(net.state_dict()) 
             
             writer.add_scalar("Benchmark/winrate", winrate, global_step)
-            writer.add_scalar("Training/draws", drawn_games, global_step)
-            writer.add_scalar("Training/game_length", game_length / 400, global_step)
-
-            drawn_games = 0
-            game_length = 0
 
 
 def get_setup():
@@ -94,6 +99,9 @@ def play_game():
 
     done = False   
     current_turn = 0 
+
+    prev_red_distance = None
+    prev_blue_distance = None
 
     with torch.inference_mode():
         while not done:
@@ -126,23 +134,40 @@ def play_game():
             turn['reward'] = 0.0 #win loss signal comes later
             turn['unknown_combat_reward'] = 0.0
             #turn['no_capture'] = obs['no_capture_count']
-            if current_turn == 0:
-                turn['home_distance_reward'] = (obs['home_distance_score']['red_home_distance'] / 180) - (obs['home_distance_score']['blue_home_distance'] / 180)
+
+            red_dist = obs['home_distance_score']['red_home_distance']
+            blue_dist = obs['home_distance_score']['blue_home_distance']
+
+            if prev_red_distance is None:
+                # first move of the game — no prior state to diff against
+                turn['home_distance_reward'] = 0.0
             else:
-                turn['home_distance_reward'] = (obs['home_distance_score']['blue_home_distance'] / 180) - (obs['home_distance_score']['red_home_distance'] / 180)
+                red_improvement = (prev_red_distance - red_dist) / 180
+                blue_improvement = (prev_blue_distance - blue_dist) / 180
+                if current_turn == 0:
+                    delta = red_improvement - blue_improvement
+                else:
+                    delta = blue_improvement - red_improvement
+                turn['home_distance_reward'] = delta * 0.05
+
+            prev_red_distance = red_dist
+            prev_blue_distance = blue_dist
+
 
             if obs['combat_outcome'] is None:
-                pass
+                stall_penalty = -((obs['no_capture_count'] / stratego_env.DRAW_MOVE_LIMIT) ** 3) * 0.2
+                turn['stall_penalty'] += stall_penalty
+
             elif obs['combat_outcome'] == 'attacker_wins':
                 if not obs['newly_revealed_to']: # defender was already revealed
-                    capture_value = rank_reward(obs['to_piece']) / 1.5
+                    capture_value = rank_reward(obs['to_piece']) / 1.2
                 else: # defender was hidden
                     capture_value = rank_reward(obs['to_piece'])
-                    if stratego_env.cell_rank(obs['from_piece']) != stratego_env.SCOUT:
-                        turn['unknown_combat_reward'] = 0.2 + (capture_value / 6)
+                    #if stratego_env.cell_rank(obs['from_piece']) != stratego_env.SCOUT:
+                    turn['unknown_combat_reward'] = 0.04 - (capture_value / 6)
                 
                 if obs['newly_revealed_from']: # attacker got revealed in the process
-                    info_penalty = rank_reward(obs['from_piece']) / 3
+                    info_penalty = rank_reward(obs['from_piece']) / 6
                 else:
                     info_penalty = 0.0
                 
@@ -150,14 +175,14 @@ def play_game():
 
             elif obs['combat_outcome'] == 'defender_wins':
                 if not obs['newly_revealed_from']: # attacker was already revealed
-                    loss_value = rank_reward(obs['from_piece']) / 1.5
+                    loss_value = rank_reward(obs['from_piece']) / 1.2
                 else: # attacker was hidden
                     loss_value = rank_reward(obs['from_piece'])
                 
                 if obs['newly_revealed_to']: # defender got revealed in the process
-                    info_penalty = rank_reward(obs['to_piece']) / 3
-                    if stratego_env.cell_rank(obs['from_piece']) != stratego_env.SCOUT:
-                        turn['unknown_combat_reward'] = 0.2 + (loss_value / 6)
+                    info_penalty = rank_reward(obs['to_piece']) / 6
+                #    if stratego_env.cell_rank(obs['from_piece']) != stratego_env.SCOUT:
+                    turn['unknown_combat_reward'] = 0.04 + (loss_value / 6)
                 else:
                     info_penalty = 0.0
                 
@@ -245,57 +270,62 @@ def compute_returns(trajectory, winner, baseline, gamma=0.98):
     returns = [0.0] * T
 
     if winner is None:
-        terminal = [-0.7, -0.7]
+        terminal = [-0.5, -0.5]
     else:
         terminal = [-1.0, -1.0]
         terminal[winner] = 1.0
 
-    future = [0.0, 0.0]  
+    future = [0.0, 0.0]
+    pending_opponent = [0.0, 0.0]
+
     for t in reversed(range(T)):
         player = t % 2
+        opponent = 1 - player
         step = trajectory[t]
-        combat = step['reward'] + step['unknown_combat_reward']
-        future[player] = combat + gamma * future[player]
-        returns[t] = future[player] + step['home_distance_reward'] + terminal[player] - baseline
+        combat = step["reward"] + step["unknown_combat_reward"]
 
-    print(returns)
+        total_combat = combat + pending_opponent[player]
+        future[player] = total_combat + gamma * future[player]
+
+        returns[t] = (future[player] + step["home_distance_reward"] + step['stall_penalty'] + terminal[player] - baseline)
+        pending_opponent[opponent] = -step["reward"]
+
     return returns
     
 
-def train_on_trajectory(trajectory, returns):
-    inputs = torch.tensor(
-        np.stack([step["input"] for step in trajectory], axis=0),
-        dtype=torch.float32,
-        device=device,
-    )
+def train_on_trajectory(trajectory, returns, batch_size=256):
+    all_inputs = np.stack([step["input"] for step in trajectory], axis=0)
+    all_actions = np.array([step["action"] for step in trajectory], dtype=np.int64)
+    all_returns = np.array(returns, dtype=np.float32)
 
-    actions = torch.tensor(
-        [step["action"] for step in trajectory],
-        dtype=torch.long,
-        device=device,
-    )
+    all_returns = (all_returns - all_returns.mean()) / (all_returns.std() + 1e-8)
 
-    returns = torch.tensor(
-        returns,
-        dtype=torch.float32,
-        device=device,
-    )
-    returns = (returns - returns.mean()) / (returns.std() + 1e-8)
-
-    logits = net(inputs)[0]
-
-    distribution = torch.distributions.Categorical(logits=logits)
-    log_probs = distribution.log_prob(actions)
-
-    entropy = distribution.entropy().mean()
-    total_loss = -(log_probs * returns).mean() - 0.02 * entropy
-
+    T = len(trajectory)
     optim.zero_grad()
-    total_loss.backward()
+
+    for start in range(0, T, batch_size):
+        end = min(start + batch_size, T)
+
+        inputs = torch.tensor(all_inputs[start:end], dtype=torch.float32, device=device)
+        actions = torch.tensor(all_actions[start:end], dtype=torch.long, device=device)
+        chunk_returns = torch.tensor(all_returns[start:end], dtype=torch.float32, device=device)
+
+        logits = net(inputs)[0]
+        distribution = torch.distributions.Categorical(logits=logits)
+        log_probs = distribution.log_prob(actions)
+        entropy = distribution.entropy().mean()
+
+        #scale it so one chuck is equal to the total loss of the trajectory
+        chunk_loss = -(log_probs * chunk_returns).mean() - 0.04 * entropy
+        chunk_loss = chunk_loss * (end - start) / T
+
+        chunk_loss.backward()
 
     torch.nn.utils.clip_grad_norm_(net.parameters(), max_norm=1.0)
-
     optim.step()
 
 
 main()
+
+
+#attempt 11: doubled entropy loss, added stall penalty of (x/150)^3 * 0.2, home distance reward still needs some work

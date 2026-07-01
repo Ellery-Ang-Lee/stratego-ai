@@ -9,6 +9,7 @@ import stratego_env
 import torch
 import time
 import model
+import math
 
 #type turn data blue
 
@@ -25,7 +26,11 @@ if any(Path("models").iterdir()):
 
 connections = set()
 
+prev_red_distance = None
+prev_blue_distance = None
+
 async def process(websocket):
+    global prev_red_distance, prev_blue_distance
     connections.add(websocket)
     async for data in websocket:
         print(f"Received: {data}")
