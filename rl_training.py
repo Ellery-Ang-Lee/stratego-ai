@@ -18,7 +18,7 @@ elif torch.cuda.is_available():
     device = torch.device("cuda")
 else:
     device = torch.device("cpu")
-print("RL on  " + str(device))
+print("RL on " + str(device))
 
 net = model.Net().to(device)
 net.train()
@@ -35,7 +35,7 @@ optim = torch.optim.Adam(
 drawn_games = 0
 game_length = 0
 
-writer = SummaryWriter("runs/rl-4")
+writer = SummaryWriter("runs/rl-8")
 
 if any(Path("models").iterdir()):
     newist = max([f for f in Path("models").iterdir() if f  .is_file()], key=lambda f: f.stat().st_mtime)
@@ -124,7 +124,12 @@ def play_game():
             probability_engine.step(obs)
 
             turn['reward'] = 0.0 #win loss signal comes later
-            turn['no_capture'] = obs['no_capture_count']
+            turn['unknown_combat_reward'] = 0.0
+            #turn['no_capture'] = obs['no_capture_count']
+            if current_turn == 0:
+                turn['home_distance_reward'] = (obs['home_distance_score']['red_home_distance'] / 180) - (obs['home_distance_score']['blue_home_distance'] / 180)
+            else:
+                turn['home_distance_reward'] = (obs['home_distance_score']['blue_home_distance'] / 180) - (obs['home_distance_score']['red_home_distance'] / 180)
 
             if obs['combat_outcome'] is None:
                 pass
@@ -133,6 +138,8 @@ def play_game():
                     capture_value = rank_reward(obs['to_piece']) / 1.5
                 else: # defender was hidden
                     capture_value = rank_reward(obs['to_piece'])
+                    if stratego_env.cell_rank(obs['from_piece']) != stratego_env.SCOUT:
+                        turn['unknown_combat_reward'] = 0.2 + (capture_value / 6)
                 
                 if obs['newly_revealed_from']: # attacker got revealed in the process
                     info_penalty = rank_reward(obs['from_piece']) / 3
@@ -149,6 +156,8 @@ def play_game():
                 
                 if obs['newly_revealed_to']: # defender got revealed in the process
                     info_penalty = rank_reward(obs['to_piece']) / 3
+                    if stratego_env.cell_rank(obs['from_piece']) != stratego_env.SCOUT:
+                        turn['unknown_combat_reward'] = 0.2 + (loss_value / 6)
                 else:
                     info_penalty = 0.0
                 
@@ -173,7 +182,7 @@ def play_game():
 
 def rank_reward(cell):
     rank = stratego_env.cell_rank(cell)
-    return [0.00,1.00,0.03,0.01,0.03,0.02,0.03,0.04,0.05,0.07,0.08,0.10,0.03][rank]
+    return [0.00,1.00,0.30,0.10,0.30,0.20,0.30,0.40,0.45,0.50,0.60,0.70,0.30][rank]
 
 def validation_game():
     with torch.no_grad():
@@ -231,28 +240,23 @@ def validation_game():
 
 
 
-def compute_returns(trajectory, winner, baseline):
-    returns = []
-    current_turn = 0
-    pending = 0
-    for step in trajectory:
-        if winner is None:
-            raw_return = -0.2
-        elif winner == current_turn:
-            raw_return = 1.0
-        else:
-            raw_return = -1.0
+def compute_returns(trajectory, winner, baseline, gamma=0.98):
+    T = len(trajectory)
+    returns = [0.0] * T
 
-        raw_return += step['reward'] #reward from combat
-        raw_return += pending
-        pending = -step['reward'] #opposite combat reward for other player
-        raw_return -= ((step['no_capture'] / 100) ** 2) * 0.5
-        raw_return -= 0.001 #time pressure
-        
+    if winner is None:
+        terminal = [-0.7, -0.7]
+    else:
+        terminal = [-1.0, -1.0]
+        terminal[winner] = 1.0
 
-        returns.append(raw_return - baseline)
-    
-        current_turn = 1 - current_turn
+    future = [0.0, 0.0]  
+    for t in reversed(range(T)):
+        player = t % 2
+        step = trajectory[t]
+        combat = step['reward'] + step['unknown_combat_reward']
+        future[player] = combat + gamma * future[player]
+        returns[t] = future[player] + step['home_distance_reward'] + terminal[player] - baseline
 
     print(returns)
     return returns
@@ -287,6 +291,9 @@ def train_on_trajectory(trajectory, returns):
 
     optim.zero_grad()
     total_loss.backward()
+
+    torch.nn.utils.clip_grad_norm_(net.parameters(), max_norm=1.0)
+
     optim.step()
 
 

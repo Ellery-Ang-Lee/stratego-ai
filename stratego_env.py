@@ -74,7 +74,7 @@ PIECE_COUNTS = {
     GENERAL:1, MARSHAL:1, BOMB:6,
 }
 
-DRAW_MOVE_LIMIT = 100
+DRAW_MOVE_LIMIT = 200
 
 _COLS = 'ABCDEFGHIK' #skipping j bc gravon is bad
 
@@ -224,6 +224,8 @@ class StrategoEnv:
             self.winner = None
             reward = 0
 
+
+
         return {
             **self._observe(),
             'from_piece': from_piece,
@@ -241,8 +243,32 @@ class StrategoEnv:
             'move_count': self.move_count,
             'current_player': self.current_player,
             'legal_actions_mask': legal_cache,
-            'no_capture_count': self.no_capture_count
+            'no_capture_count': self.no_capture_count,
+            'home_distance_score' : self.home_distance_score()
         }
+
+    def home_distance_score(self):
+        red_total = 0
+        blue_total = 0
+
+        for r in range(10):
+            for c in range(10):
+                piece = self.board[r, c]
+
+                if cell_rank(piece) in (EMPTY, LAKE, FLAG, BOMB):
+                    continue
+
+                if piece.player == RED:
+                    red_total += max(0, 6 - r)
+
+                else:
+                    blue_total += max(0, r - 3)
+
+        return {
+            "red_home_distance": red_total,
+            "blue_home_distance": blue_total,
+        }
+        
 
     def legal_actions(self):
         #legal actions as integers 
