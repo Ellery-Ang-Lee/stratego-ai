@@ -29,7 +29,7 @@ benchmark.eval()
 
 optim = torch.optim.Adam(
     net.parameters(),
-    lr = 0.005
+    lr = 0.002
 )
 
 drawn_games = 0
@@ -280,6 +280,7 @@ def train_on_trajectory(trajectory, returns):
         dtype=torch.float32,
         device=device,
     )
+    returns = (returns - returns.mean()) / (returns.std() + 1e-8)
 
     logits = net(inputs)[0]
 
@@ -287,7 +288,7 @@ def train_on_trajectory(trajectory, returns):
     log_probs = distribution.log_prob(actions)
 
     entropy = distribution.entropy().mean()
-    total_loss = -(log_probs * returns).sum() - 0.005 * entropy
+    total_loss = -(log_probs * returns).mean() - 0.02 * entropy
 
     optim.zero_grad()
     total_loss.backward()
