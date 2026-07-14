@@ -35,7 +35,7 @@ optim = torch.optim.Adam(
 drawn_games = 0
 game_length = 0
 
-writer = SummaryWriter("runs/rl-11")
+writer = SummaryWriter("runs/rl-18")
 
 if any(Path("models").iterdir()):
     newist = max([f for f in Path("models").iterdir() if f  .is_file()], key=lambda f: f.stat().st_mtime)
@@ -46,7 +46,7 @@ if any(Path("models").iterdir()):
 def main():
     global global_step, drawn_games, game_length
 
-    for epoch in range(10000):
+    for epoch in range(99999):
         print("---------- Starting game " + str(epoch) + " ----------")
         trajectory, winner = play_game()
         print(f"trajectory length: {len(trajectory)}")   # add this
@@ -57,7 +57,7 @@ def main():
 
         if global_step % 50 == 0:
             writer.add_scalar("Training/draws", drawn_games, global_step)
-            writer.add_scalar("Training/game_length", game_length / 400, global_step)
+            writer.add_scalar("Training/game_length", game_length / 50, global_step)
 
             drawn_games = 0
             game_length = 0 
@@ -100,8 +100,10 @@ def play_game():
     done = False   
     current_turn = 0 
 
-    prev_red_distance = None
-    prev_blue_distance = None
+    initial_scores = env.home_distance_score()
+    red_high = past_red = initial_scores['red_home_distance']
+    blue_high = past_blue = initial_scores['blue_home_distance']
+
 
     with torch.inference_mode():
         while not done:
@@ -133,29 +135,37 @@ def play_game():
 
             turn['reward'] = 0.0 #win loss signal comes later
             turn['unknown_combat_reward'] = 0.0
+            turn['stall_penalty'] = 0.0
+            turn['home_distance_reward'] = 0.0
             #turn['no_capture'] = obs['no_capture_count']
 
-            red_dist = obs['home_distance_score']['red_home_distance']
-            blue_dist = obs['home_distance_score']['blue_home_distance']
+            red_score = obs['home_distance_score']['red_home_distance'] / obs['home_distance_score']['red_piece_count']
+            blue_score = obs['home_distance_score']['blue_home_distance'] / obs['home_distance_score']['blue_piece_count']
 
-            if prev_red_distance is None:
-                # first move of the game — no prior state to diff against
-                turn['home_distance_reward'] = 0.0
+            if current_turn == 0:
+                if red_score > red_high:
+                    red_high = red_score    
+                    turn['home_distance_reward'] += 0.06
+                if red_score > past_red:
+                    turn['home_distance_reward'] += (-0.00152 * obs['home_distance_score']['red_home_distance']) + 0.11
+                past_red = red_score
+
+                if obs['combat_outcome'] is not None:
+                    turn['reward'] += (-0.003 * obs['home_distance_score']['red_home_distance']) + 0.2
             else:
-                red_improvement = (prev_red_distance - red_dist) / 180
-                blue_improvement = (prev_blue_distance - blue_dist) / 180
-                if current_turn == 0:
-                    delta = red_improvement - blue_improvement
-                else:
-                    delta = blue_improvement - red_improvement
-                turn['home_distance_reward'] = delta * 0.05
+                if blue_score > blue_high:
+                    blue_high = blue_score
+                    turn['home_distance_reward'] += 0.06
+                if blue_score > past_blue:
+                    turn['home_distance_reward'] += (-0.00152 * obs['home_distance_score']['blue_home_distance']) + 0.11
+                past_blue = blue_score
 
-            prev_red_distance = red_dist
-            prev_blue_distance = blue_dist
+                if obs['combat_outcome'] is not None:
+                    turn['reward'] += (-0.0045 * obs['home_distance_score']['blue_home_distance']) + 0.3
 
-
+            
             if obs['combat_outcome'] is None:
-                stall_penalty = -((obs['no_capture_count'] / stratego_env.DRAW_MOVE_LIMIT) ** 3) * 0.2
+                stall_penalty = -((obs['no_capture_count'] / stratego_env.DRAW_MOVE_LIMIT) ** 3) * 14
                 turn['stall_penalty'] += stall_penalty
 
             elif obs['combat_outcome'] == 'attacker_wins':
@@ -164,7 +174,7 @@ def play_game():
                 else: # defender was hidden
                     capture_value = rank_reward(obs['to_piece'])
                     #if stratego_env.cell_rank(obs['from_piece']) != stratego_env.SCOUT:
-                    turn['unknown_combat_reward'] = 0.04 - (capture_value / 6)
+                    turn['unknown_combat_reward'] = 0.05 - (capture_value / 6)
                 
                 if obs['newly_revealed_from']: # attacker got revealed in the process
                     info_penalty = rank_reward(obs['from_piece']) / 6
@@ -182,7 +192,7 @@ def play_game():
                 if obs['newly_revealed_to']: # defender got revealed in the process
                     info_penalty = rank_reward(obs['to_piece']) / 6
                 #    if stratego_env.cell_rank(obs['from_piece']) != stratego_env.SCOUT:
-                    turn['unknown_combat_reward'] = 0.04 + (loss_value / 6)
+                    turn['unknown_combat_reward'] = 0.05 + (loss_value / 6)
                 else:
                     info_penalty = 0.0
                 
@@ -270,7 +280,7 @@ def compute_returns(trajectory, winner, baseline, gamma=0.98):
     returns = [0.0] * T
 
     if winner is None:
-        terminal = [-0.5, -0.5]
+        terminal = [-0.85, -0.85]
     else:
         terminal = [-1.0, -1.0]
         terminal[winner] = 1.0
@@ -328,4 +338,3 @@ def train_on_trajectory(trajectory, returns, batch_size=256):
 main()
 
 
-#attempt 11: doubled entropy loss, added stall penalty of (x/150)^3 * 0.2, home distance reward still needs some work

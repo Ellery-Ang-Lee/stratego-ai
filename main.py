@@ -10,6 +10,7 @@ import torch
 import time
 import model
 import math
+import random
 
 #type turn data blue
 
@@ -39,10 +40,13 @@ async def process(websocket):
         if message["type"] == "game":
             setup = message["data"]
                     
-            env.reset(red_setup=setup[:60], blue_setup=setup[60:])
+            #env.reset(red_setup=setup[:60], blue_setup=setup[60:])
+            env.reset(*get_setup())
             probability_engine.initialize()
 
             print("game reset")
+            broadcast(connections, json.dumps(generate_payload("game", env.generate_website_board())))
+
         
         elif message["type"] == "move":
             try:
@@ -91,6 +95,7 @@ async def process(websocket):
 
                 probabilities = torch.softmax(masked_logits, dim=1)
                 action = torch.multinomial(probabilities, num_samples=1).item()
+                print(env.action_to_gravon(action))
                 obs = env.step(env.action_to_gravon(action))
                 probability_engine.step(obs)
 
@@ -117,6 +122,17 @@ def generate_payload(type, data):
         "type" : type,
         "data" : data
     }
+
+def get_setup():
+    with open("setups/red.txt", "r", encoding="utf-8") as file:
+        lines = file.readlines()
+        red = lines[random.randint(0,len(lines) - 1)].strip()
+    
+    with open("setups/blue.txt", "r", encoding="utf-8") as file:
+        lines = file.readlines()
+        blue = lines[random.randint(0,len(lines) - 1)].strip()
+    
+    return red,blue
 
 async def main():
     async with serve(process, "0.0.0.0", 8081):
