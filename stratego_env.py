@@ -250,8 +250,7 @@ class StrategoEnv:
     def home_distance_score(self):
         red_total = 0
         blue_total = 0
-        red_count = 0
-        blue_count = 0
+        total_count = 0
 
         for r in range(10):
             for c in range(10):
@@ -262,22 +261,16 @@ class StrategoEnv:
 
                 if piece.player == RED:
                     red_total += max(0, 6 - r)
-                    red_count += 1
+                    total_count += 1
 
                 else:
                     blue_total += max(0, r - 3)
-                    blue_count += 1
-        
-        if blue_count == 0:
-            blue_count = 0.1  
-        if red_count == 0:
-            red_count = 0.1 
+                    total_count += 1
 
         return {
             "red_home_distance": red_total,
             "blue_home_distance": blue_total,
-            "red_piece_count": red_count,
-            "blue_piece_count": blue_count
+            "total_count": total_count,
         }
         
 

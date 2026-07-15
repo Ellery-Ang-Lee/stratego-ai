@@ -9,7 +9,6 @@ import numpy as np
 import math
 from torch.utils.tensorboard import SummaryWriter
 
-
 global_step = 1
 
 if torch.backends.mps.is_available():
@@ -35,7 +34,7 @@ optim = torch.optim.Adam(
 drawn_games = 0
 game_length = 0
 
-writer = SummaryWriter("runs/rl-18")
+writer = SummaryWriter("runs/rl-19")
 
 if any(Path("models").iterdir()):
     newist = max([f for f in Path("models").iterdir() if f  .is_file()], key=lambda f: f.stat().st_mtime)
@@ -129,9 +128,20 @@ def play_game():
 
             turn['input'] = input
             turn['action'] = action
-
-            obs = env.step(env.action_to_gravon(action))
-            probability_engine.step(obs)
+            
+            try:
+                obs = env.step(env.action_to_gravon(action))
+                probability_engine.step(obs)
+            except ValueError:
+                while True:
+                    try:
+                        action = random.randint(0,10000)
+                        turn['action'] = action
+                        obs = env.step(env.action_to_gravon(action))
+                        probability_engine.step(obs)
+                        break
+                    except ValueError:
+                        pass
 
             turn['reward'] = 0.0 #win loss signal comes later
             turn['unknown_combat_reward'] = 0.0
@@ -139,66 +149,70 @@ def play_game():
             turn['home_distance_reward'] = 0.0
             #turn['no_capture'] = obs['no_capture_count']
 
-            red_score = obs['home_distance_score']['red_home_distance'] / obs['home_distance_score']['red_piece_count']
-            blue_score = obs['home_distance_score']['blue_home_distance'] / obs['home_distance_score']['blue_piece_count']
+            red_score = (obs['home_distance_score']['red_home_distance'] / obs['home_distance_score']['total_count']) * 2
+            blue_score = (obs['home_distance_score']['blue_home_distance'] / obs['home_distance_score']['total_count']) * 2
 
             if current_turn == 0:
                 if red_score > red_high:
                     red_high = red_score    
                     turn['home_distance_reward'] += 0.06
                 if red_score > past_red:
-                    turn['home_distance_reward'] += (-0.00152 * obs['home_distance_score']['red_home_distance']) + 0.11
-                past_red = red_score
+                    turn['home_distance_reward'] += (-0.000757 * obs['home_distance_score']['total_count']) + 0.11
+                past_red = red_score 
 
-                if obs['combat_outcome'] is not None:
-                    turn['reward'] += (-0.003 * obs['home_distance_score']['red_home_distance']) + 0.2
             else:
                 if blue_score > blue_high:
                     blue_high = blue_score
                     turn['home_distance_reward'] += 0.06
                 if blue_score > past_blue:
-                    turn['home_distance_reward'] += (-0.00152 * obs['home_distance_score']['blue_home_distance']) + 0.11
+                    turn['home_distance_reward'] += (-0.000757 * obs['home_distance_score']['total_count']) + 0.11
                 past_blue = blue_score
-
-                if obs['combat_outcome'] is not None:
-                    turn['reward'] += (-0.0045 * obs['home_distance_score']['blue_home_distance']) + 0.3
 
             
             if obs['combat_outcome'] is None:
-                stall_penalty = -((obs['no_capture_count'] / stratego_env.DRAW_MOVE_LIMIT) ** 3) * 14
+                stall_penalty = -((obs['no_capture_count'] / stratego_env.DRAW_MOVE_LIMIT) ** 4) * 100
                 turn['stall_penalty'] += stall_penalty
-
-            elif obs['combat_outcome'] == 'attacker_wins':
-                if not obs['newly_revealed_to']: # defender was already revealed
-                    capture_value = rank_reward(obs['to_piece']) / 1.2
-                else: # defender was hidden
-                    capture_value = rank_reward(obs['to_piece'])
-                    #if stratego_env.cell_rank(obs['from_piece']) != stratego_env.SCOUT:
-                    turn['unknown_combat_reward'] = 0.05 - (capture_value / 6)
-                
-                if obs['newly_revealed_from']: # attacker got revealed in the process
-                    info_penalty = rank_reward(obs['from_piece']) / 6
-                else:
-                    info_penalty = 0.0
-                
-                turn['reward'] += capture_value - info_penalty
-
-            elif obs['combat_outcome'] == 'defender_wins':
-                if not obs['newly_revealed_from']: # attacker was already revealed
-                    loss_value = rank_reward(obs['from_piece']) / 1.2
-                else: # attacker was hidden
-                    loss_value = rank_reward(obs['from_piece'])
-                
-                if obs['newly_revealed_to']: # defender got revealed in the process
-                    info_penalty = rank_reward(obs['to_piece']) / 6
-                #    if stratego_env.cell_rank(obs['from_piece']) != stratego_env.SCOUT:
-                    turn['unknown_combat_reward'] = 0.05 + (loss_value / 6)
-                else:
-                    info_penalty = 0.0
-                
-                turn['reward'] -= (loss_value - info_penalty)
             else:
-                pass #ranks are always the same so its a draw
+                #in home distance reward so it does not bounce back to the other player 
+                base = (-0.00333 * obs['home_distance_score']['total_count']) + 0.32
+                if obs['combat_outcome'] == 'attacker_wins':
+                    turn['home_distance_reward'] += base
+                elif obs['combat_outcome'] == 'draw':
+                    turn['home_distance_reward'] += base * 0.5
+                else: 
+                    turn['home_distance_reward'] += base * 0.1
+
+                if obs['combat_outcome'] == 'attacker_wins':
+                    if not obs['newly_revealed_to']: # defender was already revealed
+                        capture_value = rank_reward(obs['to_piece']) / 1.2
+                    else: # defender was hidden
+                        capture_value = rank_reward(obs['to_piece'])
+                        #if stratego_env.cell_rank(obs['from_piece']) != stratego_env.SCOUT:
+                        turn['unknown_combat_reward'] = 0.05 - (capture_value / 6)
+                    
+                    if obs['newly_revealed_from']: # attacker got revealed in the process
+                        info_penalty = rank_reward(obs['from_piece']) / 7
+                    else:
+                        info_penalty = 0.0
+                    
+                    turn['reward'] += capture_value - info_penalty
+
+                elif obs['combat_outcome'] == 'defender_wins':
+                    if not obs['newly_revealed_from']: # attacker was already revealed
+                        loss_value = rank_reward(obs['from_piece']) / 1.2
+                    else: # attacker was hidden
+                        loss_value = rank_reward(obs['from_piece'])
+                    
+                    if obs['newly_revealed_to']: # defender got revealed in the process
+                        info_penalty = rank_reward(obs['to_piece']) / 7
+                    #    if stratego_env.cell_rank(obs['from_piece']) != stratego_env.SCOUT:
+                        turn['unknown_combat_reward'] = 0.05 + (loss_value / 6)
+                    else:
+                        info_penalty = 0.0
+                    
+                    turn['reward'] -= (loss_value - info_penalty)
+                else:
+                    pass
 
             if obs['done']:
                 done = True
@@ -217,7 +231,7 @@ def play_game():
 
 def rank_reward(cell):
     rank = stratego_env.cell_rank(cell)
-    return [0.00,1.00,0.30,0.10,0.30,0.20,0.30,0.40,0.45,0.50,0.60,0.70,0.30][rank]
+    return [0.00,1.00,0.40,0.10,0.30,0.20,0.30,0.40,0.45,0.50,0.60,0.70,0.30][rank]
 
 def validation_game():
     with torch.no_grad():
@@ -326,7 +340,7 @@ def train_on_trajectory(trajectory, returns, batch_size=256):
         entropy = distribution.entropy().mean()
 
         #scale it so one chuck is equal to the total loss of the trajectory
-        chunk_loss = -(log_probs * chunk_returns).mean() - 0.04 * entropy
+        chunk_loss = -(log_probs * chunk_returns).mean() - 0.06 * entropy
         chunk_loss = chunk_loss * (end - start) / T
 
         chunk_loss.backward()
