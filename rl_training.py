@@ -6,8 +6,9 @@ import torch
 import torch.nn as nn
 import model
 import numpy as np
-import math
 from torch.utils.tensorboard import SummaryWriter
+from multiprocessing import Pool, get_context
+import io
 
 global_step = 1
 
@@ -34,7 +35,7 @@ optim = torch.optim.Adam(
 drawn_games = 0
 game_length = 0
 
-writer = SummaryWriter("runs/rl-19")
+writer = SummaryWriter("runs/rl-20")
 
 if any(Path("models").iterdir()):
     newist = max([f for f in Path("models").iterdir() if f  .is_file()], key=lambda f: f.stat().st_mtime)
@@ -45,33 +46,47 @@ if any(Path("models").iterdir()):
 def main():
     global global_step, drawn_games, game_length
 
-    for epoch in range(99999):
-        print("---------- Starting game " + str(epoch) + " ----------")
-        trajectory, winner = play_game()
-        print(f"trajectory length: {len(trajectory)}")   # add this
-        train_on_trajectory(trajectory, compute_returns(trajectory, winner, 0.0))
-        if device.type == "mps":
-            torch.mps.empty_cache()
-        global_step += 1
+    ctx = get_context("spawn")
 
-        if global_step % 50 == 0:
-            writer.add_scalar("Training/draws", drawn_games, global_step)
-            writer.add_scalar("Training/game_length", game_length / 50, global_step)
+    with ctx.Pool(processes=8) as pool:
+        for epoch in range(99999):
+            print("---------- Starting round " + str(epoch) + " ----------")
 
-            drawn_games = 0
-            game_length = 0 
+            buffer = io.BytesIO()
+            torch.save(net.state_dict(), buffer)
+            state_bytes = buffer.getvalue()
 
-        if global_step % 400 == 0:
-            torch.save(net.state_dict(), "models/rl-" + str(global_step)) 
+            results = pool.map(worker_play_game, [state_bytes] * 8)
 
-            benchmark_wins = 0
-            for i in range(20):
-                benchmark_wins += validation_game()
-            winrate = (1 - (benchmark_wins / 20)) * 100
-            if winrate > 80:
-                benchmark.load_state_dict(net.state_dict()) 
-            
-            writer.add_scalar("Benchmark/winrate", winrate, global_step)
+            for trajectory, winner, is_draw, move_count in results:
+                print(f"trajectory length: {len(trajectory)}")   
+                train_on_trajectory(trajectory, compute_returns(trajectory, winner, 0.0))
+
+                if is_draw:
+                    drawn_games += 1
+                game_length += move_count
+
+                if device.type == "mps":
+                    torch.mps.empty_cache()
+                global_step += 1
+
+                if global_step % 50 == 0:
+                    writer.add_scalar("Training/draws", drawn_games, global_step)
+                    writer.add_scalar("Training/game_length", game_length / 50, global_step)
+                    drawn_games = 0
+                    game_length = 0 
+
+                if global_step % 400 == 0:
+                    torch.save(net.state_dict(), "models/rl-" + str(global_step)) 
+
+                    benchmark_wins = 0
+                    for i in range(20):
+                        benchmark_wins += validation_game()
+                    winrate = (1 - (benchmark_wins / 20)) * 100
+                    if winrate > 80:
+                        benchmark.load_state_dict(net.state_dict()) 
+                    
+                    writer.add_scalar("Benchmark/winrate", winrate, global_step)
 
 
 def get_setup():
@@ -85,16 +100,28 @@ def get_setup():
     
     return red,blue
  
+def worker_play_game(state_dict_bytes):
+    import io
+    import torch
+    import model
+    import probability_engine
+    import stratego_env
 
-def play_game():
-    global drawn_games, game_length
+    worker_net = model.Net()
+    buffer = io.BytesIO(state_dict_bytes)
+    worker_net.load_state_dict(torch.load(buffer, map_location="cpu"))
+    worker_net.eval()
 
+    return play_game(worker_net, torch.device("cpu"))
+
+def play_game(net, device):
     env = stratego_env.StrategoEnv()
     probability_engine.initialize()
     env.reset(*get_setup())
 
     trajectory = []
     winner = None
+    game_length = 0
 
     done = False   
     current_turn = 0 
@@ -217,9 +244,7 @@ def play_game():
             if obs['done']:
                 done = True
                 winner = obs['winner']
-                if winner is None:
-                    drawn_games += 1
-                game_length += obs['move_count']
+                game_length = obs['move_count']
 
             #turn.append(obs['reward'])
 
@@ -227,11 +252,11 @@ def play_game():
             trajectory.append(turn)
     
 
-    return trajectory, winner
+    return trajectory, winner, winner is None, game_length
 
 def rank_reward(cell):
     rank = stratego_env.cell_rank(cell)
-    return [0.00,1.00,0.40,0.10,0.30,0.20,0.30,0.40,0.45,0.50,0.60,0.70,0.30][rank]
+    return [0.00,5.00,0.40,0.10,0.15,0.20,0.30,0.40,0.45,0.50,0.60,0.70,0.50][rank]
 
 def validation_game():
     with torch.no_grad():
@@ -294,7 +319,7 @@ def compute_returns(trajectory, winner, baseline, gamma=0.98):
     returns = [0.0] * T
 
     if winner is None:
-        terminal = [-0.85, -0.85]
+        terminal = [-1.1, -1.1]
     else:
         terminal = [-1.0, -1.0]
         terminal[winner] = 1.0
@@ -348,7 +373,7 @@ def train_on_trajectory(trajectory, returns, batch_size=256):
     torch.nn.utils.clip_grad_norm_(net.parameters(), max_norm=1.0)
     optim.step()
 
-
-main()
+if __name__ == "__main__":
+    main()
 
 
