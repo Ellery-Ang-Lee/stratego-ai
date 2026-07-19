@@ -57,4 +57,8 @@ print('\033[0m')
             
         
 
-    
+import torch
+sd = torch.load("models/rl-800")  # or whatever the latest checkpoint before the crash was
+for name, param in sd.items():
+    if torch.isnan(param).any() or torch.isinf(param).any():
+        print(f"NaN/Inf found in {name}")
