@@ -10,7 +10,7 @@ from torch.utils.tensorboard import SummaryWriter
 from multiprocessing import Pool, get_context
 import io
 
-global_step = 1
+global_step = 2001
 
 if torch.backends.mps.is_available():
     device = torch.device("mps")
@@ -29,13 +29,15 @@ benchmark.eval()
 
 optim = torch.optim.Adam(
     net.parameters(),
-    lr = 0.002
+    lr = 0.0003
 )
 
 drawn_games = 0
 game_length = 0
+entropy_sum = 0.0
+entropy_count = 0
 
-writer = SummaryWriter("runs/rl-21")
+writer = SummaryWriter("runs/rl-26")
 
 if any(Path("models").iterdir()):
     newist = max([f for f in Path("models").iterdir() if f  .is_file()], key=lambda f: f.stat().st_mtime)
@@ -44,7 +46,7 @@ if any(Path("models").iterdir()):
     net.load_state_dict(torch.load(newist, map_location=device))
 
 def main():
-    global global_step, drawn_games, game_length
+    global global_step, drawn_games, game_length, entropy_sum, entropy_count
 
     ctx = get_context("spawn")
 
@@ -63,7 +65,7 @@ def main():
             print("Selecting opponents:")
 
             for _ in range(10):
-                if checkpoint_pool and random.random() < 0.7:
+                if checkpoint_pool and random.random() < 0.5:
                     opponent_path = str(random.choice(checkpoint_pool))
                     print(" - " + opponent_path)
                 else:
@@ -73,6 +75,10 @@ def main():
 
             results = pool.map(worker_play_game, batch_args)
 
+            round_trajectories = []
+            round_returns = []
+            round_meta = []
+
             for trajectory, winner, is_draw, move_count, learner_side in results:
                 print(f"trajectory length: {len(trajectory)}")   
 
@@ -81,21 +87,30 @@ def main():
                 learner_trajectory = [t for t in trajectory if t['is_learner']]
                 learner_returns = [r for t, r in zip(trajectory, returns) if t['is_learner']]
 
-                train_on_trajectory(learner_trajectory, learner_returns)
+                print(f"winner={winner}, learner_side={learner_side}, is_draw={is_draw}, mean_learner_return={np.mean(learner_returns):.3f}")
 
+                round_trajectories.append(learner_trajectory)
+                round_returns.append(learner_returns)
+                round_meta.append((is_draw, move_count))
+
+            mean_entropy = train_on_round(round_trajectories, round_returns)
+            entropy_sum += mean_entropy
+            entropy_count += 1
+
+            for is_draw, move_count in round_meta:
                 if is_draw:
                     drawn_games += 1
                 game_length += move_count
-
-                if device.type == "mps":
-                    torch.mps.empty_cache()
                 global_step += 1
 
                 if global_step % 50 == 0:
                     writer.add_scalar("Training/draws", drawn_games, global_step)
                     writer.add_scalar("Training/game_length", game_length / 50, global_step)
+                    writer.add_scalar("Training/entropy", entropy_sum / max(entropy_count, 1), global_step)
                     drawn_games = 0
-                    game_length = 0 
+                    game_length = 0
+                    entropy_sum = 0.0
+                    entropy_count = 0
 
                 if global_step % 400 == 0:
                     torch.save(net.state_dict(), "models/rl-" + str(global_step)) 
@@ -108,6 +123,9 @@ def main():
                         benchmark.load_state_dict(net.state_dict()) 
                     
                     writer.add_scalar("Benchmark/winrate", winrate, global_step)
+
+            if device.type == "mps":
+                torch.mps.empty_cache()
 
 
 def get_setup():
@@ -187,6 +205,7 @@ def play_game(learner_net, opponent_net, learner_side, device):
 
             turn['input'] = input
             turn['action'] = action
+            turn['mask'] = env.legal_actions_mask()  
             turn['is_learner'] = (current_turn == learner_side)
         
             try:
@@ -230,11 +249,11 @@ def play_game(learner_net, opponent_net, learner_side, device):
 
             
             if obs['combat_outcome'] is None:
-                stall_penalty = -((obs['no_capture_count'] / stratego_env.DRAW_MOVE_LIMIT) ** 2.5) * 10
+                stall_penalty = -((obs['no_capture_count'] / stratego_env.DRAW_MOVE_LIMIT) ** 2.5) * 32
                 turn['stall_penalty'] += stall_penalty
             else:
                 #in home distance reward so it does not bounce back to the other player 
-                base = (-0.00333 * obs['home_distance_score']['total_count']) + 0.32
+                base = (-0.0033 * obs['home_distance_score']['total_count']) + 0.35
                 if obs['combat_outcome'] == 'attacker_wins':
                     turn['home_distance_reward'] += base
                 elif obs['combat_outcome'] == 'draw':
@@ -352,7 +371,7 @@ def compute_returns(trajectory, winner, baseline, gamma=0.98):
     returns = [0.0] * T
 
     if winner is None:
-        terminal = [-2, -2]
+        terminal = [-3, -3]
     else:
         terminal = [-1.0, -1.0]
         terminal[winner] = 1.0
@@ -373,40 +392,61 @@ def compute_returns(trajectory, winner, baseline, gamma=0.98):
         pending_opponent[opponent] = -step["reward"]
 
     return returns
-    
 
-def train_on_trajectory(trajectory, returns, batch_size=256):
-    all_inputs = np.stack([step["input"] for step in trajectory], axis=0)
-    all_actions = np.array([step["action"] for step in trajectory], dtype=np.int64)
-    all_returns = np.array(returns, dtype=np.float32)
 
-    all_returns = all_returns / (all_returns.std() + 1e-8)
+def train_on_round(round_trajectories, round_returns, batch_size=256):
+    all_returns_flat = np.concatenate([np.array(r, dtype=np.float32) for r in round_returns if len(r) > 0])
+    global_mean = all_returns_flat.mean()
+    global_std = all_returns_flat.std()
 
-    T = len(trajectory)
+    total_learner_steps = len(all_returns_flat)
+
     optim.zero_grad()
 
-    for start in range(0, T, batch_size):
-        end = min(start + batch_size, T)
+    entropy_total = 0.0
+    entropy_batches = 0
 
-        inputs = torch.tensor(all_inputs[start:end], dtype=torch.float32, device=device)
-        actions = torch.tensor(all_actions[start:end], dtype=torch.long, device=device)
-        chunk_returns = torch.tensor(all_returns[start:end], dtype=torch.float32, device=device)
+    for trajectory, returns in zip(round_trajectories, round_returns):
+        if len(trajectory) == 0:
+            continue
 
-        logits = net(inputs)[0]
-        distribution = torch.distributions.Categorical(logits=logits)
-        log_probs = distribution.log_prob(actions)
-        entropy = distribution.entropy().mean()
+        all_inputs = np.stack([step["input"] for step in trajectory], axis=0)
+        all_actions = np.array([step["action"] for step in trajectory], dtype=np.int64)
+        all_masks = np.stack([step["mask"] for step in trajectory], axis=0)
+        all_returns = np.array(returns, dtype=np.float32)
 
-        #scale it so one chuck is equal to the total loss of the trajectory
-        chunk_loss = -(log_probs * chunk_returns).mean() - 0.06 * entropy
-        chunk_loss = chunk_loss * (end - start) / T
+        all_returns = (all_returns - global_mean) / (global_std + 1e-8)
 
-        chunk_loss.backward()
+        T = len(trajectory)
+
+        for start in range(0, T, batch_size):
+            end = min(start + batch_size, T)
+
+            inputs = torch.tensor(all_inputs[start:end], dtype=torch.float32, device=device)
+            actions = torch.tensor(all_actions[start:end], dtype=torch.long, device=device)
+            masks = torch.tensor(all_masks[start:end], device=device)
+            chunk_returns = torch.tensor(all_returns[start:end], dtype=torch.float32, device=device)
+
+            raw_logits = net(inputs)[0]
+            additive_mask = torch.where(masks, 0.0, float('-inf'))
+            masked_logits = raw_logits + additive_mask
+
+            distribution = torch.distributions.Categorical(logits=masked_logits)
+            log_probs = distribution.log_prob(actions)
+            entropy = distribution.entropy().mean()
+
+            entropy_total += entropy.item()
+            entropy_batches += 1
+
+            chunk_loss = -(log_probs * chunk_returns).mean() - 0.5 * entropy
+            chunk_loss = chunk_loss * (end - start) / total_learner_steps
+
+            chunk_loss.backward()
 
     torch.nn.utils.clip_grad_norm_(net.parameters(), max_norm=1.0)
     optim.step()
 
+    return entropy_total / max(entropy_batches, 1)
+
 if __name__ == "__main__":
     main()
-
-
