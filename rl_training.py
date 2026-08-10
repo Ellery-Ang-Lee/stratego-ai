@@ -10,43 +10,48 @@ from torch.utils.tensorboard import SummaryWriter
 from multiprocessing import Pool, get_context
 import io
 
-global_step = 2001
-
-if torch.backends.mps.is_available():
-    device = torch.device("mps")
-elif torch.cuda.is_available():
-    device = torch.device("cuda")
-else:
-    device = torch.device("cpu")
-print("RL on " + str(device))
-
-net = model.Net().to(device)
-net.train()
-
-benchmark = model.Net().to(device)
-benchmark.load_state_dict(net.state_dict()) 
-benchmark.eval()
-
-optim = torch.optim.Adam(
-    net.parameters(),
-    lr = 0.0003
-)
+global_step = 4001
+device = None
+net = None
+benchmark = None
+optim = None
+writer = None
 
 drawn_games = 0
 game_length = 0
 entropy_sum = 0.0
 entropy_count = 0
 
-writer = SummaryWriter("runs/rl-26")
-
-if any(Path("models").iterdir()):
-    newist = max([f for f in Path("models").iterdir() if f  .is_file()], key=lambda f: f.stat().st_mtime)
-    print(str(newist).split("/")[1][0])
-    print("loading model: " + str(newist))
-    net.load_state_dict(torch.load(newist, map_location=device))
-
 def main():
     global global_step, drawn_games, game_length, entropy_sum, entropy_count
+    global device, net, benchmark, optim, writer
+
+    if torch.backends.mps.is_available():
+        device = torch.device("mps")
+    elif torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
+    print("RL on " + str(device))
+
+    net = model.Net().to(device)
+    net.train()
+
+    benchmark = model.Net().to(device)
+    benchmark.load_state_dict(net.state_dict())
+    benchmark.eval()
+
+    optim = torch.optim.Adam(
+        net.parameters(),
+        lr = 0.0003
+    )
+
+    writer = SummaryWriter("runs/rl-26")
+
+    if any(Path("models").iterdir()):
+        newist = max([f for f in Path("models").iterdir() if f.is_file()], key=lambda f: f.stat().st_mtime)
+        print("loading model: " + str(newist))
+        net.load_state_dict(torch.load(newist, map_location=device))
 
     ctx = get_context("spawn")
 
@@ -54,9 +59,7 @@ def main():
         for epoch in range(99999):
             print("---------- Starting round " + str(epoch) + " ----------")
 
-            buffer = io.BytesIO()
-            torch.save(net.state_dict(), buffer)
-            state_bytes = buffer.getvalue()
+            torch.save(net.state_dict(), "temp_learner.pt")
 
             checkpoint_pool = [f for f in Path("models").iterdir() if f.is_file()]
 
@@ -71,7 +74,7 @@ def main():
                 else:
                     opponent_path = None
                     print(" - Self Play")
-                batch_args.append((state_bytes, opponent_path))
+                batch_args.append(("temp_learner.pt", opponent_path))
 
             results = pool.map(worker_play_game, batch_args)
 
@@ -140,16 +143,17 @@ def get_setup():
     return red,blue
  
 def worker_play_game(args):
-    state_dict_bytes, opponent_path = args
+    learner_path, opponent_path = args
     import io
     import torch
     import model
     import probability_engine
     import stratego_env
 
+    torch.set_num_threads(1)
+
     learner_net = model.Net()
-    buffer = io.BytesIO(state_dict_bytes)
-    learner_net.load_state_dict(torch.load(buffer, map_location="cpu"))
+    learner_net.load_state_dict(torch.load(learner_path, map_location="cpu"))
     learner_net.eval()
 
     if opponent_path is None:
@@ -197,6 +201,15 @@ def play_game(learner_net, opponent_net, learner_side, device):
             )
 
             mask_tensor = torch.tensor(env.legal_actions_mask(), device=device)
+
+            if not mask_tensor.any():
+                print(f"WARNING: no legal actions available at turn {current_turn}, move {game_length}")
+                print(f"obs done: {obs.get('done') if 'obs' in dir() else 'N/A'}")
+                # Force a random legal-ish fallback or treat as terminal — adjust based on what you learn
+                done = True
+                winner = 1 - current_turn  # or however you want to handle this edge case
+                break
+
             additive_mask = torch.where(mask_tensor, 0.0, float('-inf'))
             temperature = 1.0
             masked_logits = (pred[0] + additive_mask) / temperature
@@ -228,8 +241,14 @@ def play_game(learner_net, opponent_net, learner_side, device):
             turn['home_distance_reward'] = 0.0
             #turn['no_capture'] = obs['no_capture_count']
 
-            red_score = (obs['home_distance_score']['red_home_distance'] / obs['home_distance_score']['total_count']) * 2
-            blue_score = (obs['home_distance_score']['blue_home_distance'] / obs['home_distance_score']['total_count']) * 2
+            total_count = obs['home_distance_score']['total_count']
+
+            if total_count > 0:
+                red_score = (obs['home_distance_score']['red_home_distance'] / total_count) * 2
+                blue_score = (obs['home_distance_score']['blue_home_distance'] / total_count) * 2
+            else:
+                red_score = past_red
+                blue_score = past_blue
 
             if current_turn == 0:
                 if red_score > red_high:
@@ -293,7 +312,7 @@ def play_game(learner_net, opponent_net, learner_side, device):
                 else:
                     pass
 
-            if obs['done']:
+            if obs['done'] or game_length >= 3000:
                 done = True
                 winner = obs['winner']
                 game_length = obs['move_count']
@@ -351,7 +370,7 @@ def validation_game():
             obs = env.step(env.action_to_gravon(action))
             probability_engine.step(obs)
 
-            if obs['done']:
+            if obs['done'] or game_length >= 3000:
                 done = True
                 winner = obs['winner']
             current_turn = 1 - current_turn
