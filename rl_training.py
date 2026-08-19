@@ -10,7 +10,12 @@ from torch.utils.tensorboard import SummaryWriter
 from multiprocessing import Pool, get_context
 import io
 
-global_step = 4001
+global_step = 0 #UNCOMMENT THE CHECKPOINT RESTORE 
+
+# UNCOMMENT THE CHECKPOINT RESTORE 
+# UNCOMMENT THE CHECKPOINT RESTORE 
+# UNCOMMENT THE CHECKPOINT RESTORE 
+
 device = None
 net = None
 benchmark = None
@@ -21,6 +26,11 @@ drawn_games = 0
 game_length = 0
 entropy_sum = 0.0
 entropy_count = 0
+
+running_mean = 0.0
+running_var = 1.0
+running_initialized = False
+norm_momentum = 0.005 
 
 def main():
     global global_step, drawn_games, game_length, entropy_sum, entropy_count
@@ -46,12 +56,12 @@ def main():
         lr = 0.0003
     )
 
-    writer = SummaryWriter("runs/rl-26")
+    writer = SummaryWriter("runs/rl-30")
 
-    if any(Path("models").iterdir()):
-        newist = max([f for f in Path("models").iterdir() if f.is_file()], key=lambda f: f.stat().st_mtime)
-        print("loading model: " + str(newist))
-        net.load_state_dict(torch.load(newist, map_location=device))
+    #if any(Path("models").iterdir()):
+    #    newist = max([f for f in Path("models").iterdir() if f.is_file()], key=lambda f: f.stat().st_mtime)
+    #    print("loading model: " + str(newist))
+    #    net.load_state_dict(torch.load(newist, map_location=device))
 
     ctx = get_context("spawn")
 
@@ -64,10 +74,11 @@ def main():
             checkpoint_pool = [f for f in Path("models").iterdir() if f.is_file()]
 
             batch_args = []
+            results = []
 
             print("Selecting opponents:")
 
-            for _ in range(10):
+            for _ in range(50):
                 if checkpoint_pool and random.random() < 0.5:
                     opponent_path = str(random.choice(checkpoint_pool))
                     print(" - " + opponent_path)
@@ -76,7 +87,8 @@ def main():
                     print(" - Self Play")
                 batch_args.append(("temp_learner.pt", opponent_path))
 
-            results = pool.map(worker_play_game, batch_args)
+            for i in range(5):
+                results += pool.map(worker_play_game, batch_args[i*10:(i+1)*10])
 
             round_trajectories = []
             round_returns = []
@@ -270,6 +282,7 @@ def play_game(learner_net, opponent_net, learner_side, device):
             if obs['combat_outcome'] is None:
                 stall_penalty = -((obs['no_capture_count'] / stratego_env.DRAW_MOVE_LIMIT) ** 2.5) * 32
                 turn['stall_penalty'] += stall_penalty
+                turn['reward'] -= 0.08
             else:
                 #in home distance reward so it does not bounce back to the other player 
                 base = (-0.0033 * obs['home_distance_score']['total_count']) + 0.35
@@ -281,34 +294,9 @@ def play_game(learner_net, opponent_net, learner_side, device):
                     turn['home_distance_reward'] += base * 0.1
 
                 if obs['combat_outcome'] == 'attacker_wins':
-                    if not obs['newly_revealed_to']: # defender was already revealed
-                        capture_value = rank_reward(obs['to_piece']) / 1.2
-                    else: # defender was hidden
-                        capture_value = rank_reward(obs['to_piece'])
-                        #if stratego_env.cell_rank(obs['from_piece']) != stratego_env.SCOUT:
-                        turn['unknown_combat_reward'] = 0.05 - (capture_value / 6)
-                    
-                    if obs['newly_revealed_from']: # attacker got revealed in the process
-                        info_penalty = rank_reward(obs['from_piece']) / 7
-                    else:
-                        info_penalty = 0.0
-                    
-                    turn['reward'] += capture_value - info_penalty
-
+                    turn['reward'] += rank_reward(obs['to_piece'])
                 elif obs['combat_outcome'] == 'defender_wins':
-                    if not obs['newly_revealed_from']: # attacker was already revealed
-                        loss_value = rank_reward(obs['from_piece']) / 1.2
-                    else: # attacker was hidden
-                        loss_value = rank_reward(obs['from_piece'])
-                    
-                    if obs['newly_revealed_to']: # defender got revealed in the process
-                        info_penalty = rank_reward(obs['to_piece']) / 7
-                    #    if stratego_env.cell_rank(obs['from_piece']) != stratego_env.SCOUT:
-                        turn['unknown_combat_reward'] = 0.05 + (loss_value / 6)
-                    else:
-                        info_penalty = 0.0
-                    
-                    turn['reward'] -= (loss_value - info_penalty)
+                    turn['reward'] -= rank_reward(obs['from_piece'])
                 else:
                     pass
 
@@ -327,7 +315,7 @@ def play_game(learner_net, opponent_net, learner_side, device):
 
 def rank_reward(cell):
     rank = stratego_env.cell_rank(cell)
-    return [0.00,5.00,0.40,0.10,0.15,0.20,0.30,0.40,0.45,0.50,0.60,0.70,0.50][rank]
+    return [0.00, 10.00, 0.30, 0.10, 0.45, 0.30, 0.45, 0.60, 0.70, 1.00, 3.00, 5.00, 0.50][rank]
 
 def validation_game():
     with torch.no_grad():
@@ -390,13 +378,17 @@ def compute_returns(trajectory, winner, baseline, gamma=0.98):
     returns = [0.0] * T
 
     if winner is None:
-        terminal = [-3, -3]
+        terminal = [-10, -10]
     else:
-        terminal = [-1.0, -1.0]
-        terminal[winner] = 1.0
+        terminal = [-5.0, -5.0]
+        terminal[winner] = 5.0
 
     future = [0.0, 0.0]
     pending_opponent = [0.0, 0.0]
+
+    last_index = [None, None]
+    for t in range(T):
+        last_index[t % 2] = t
 
     for t in reversed(range(T)):
         player = t % 2
@@ -405,9 +397,13 @@ def compute_returns(trajectory, winner, baseline, gamma=0.98):
         combat = step["reward"] + step["unknown_combat_reward"]
 
         total_combat = combat + pending_opponent[player]
-        future[player] = total_combat + gamma * future[player]
+        step_reward = total_combat + step["home_distance_reward"] + step["stall_penalty"]
 
-        returns[t] = (future[player] + step["home_distance_reward"] + step['stall_penalty'] + terminal[player] - baseline)
+        if t == last_index[player]:
+            step_reward += terminal[player]
+
+        future[player] = step_reward + gamma * future[player]
+        returns[t] = future[player] - baseline
         pending_opponent[opponent] = -step["reward"]
 
     return returns
@@ -415,8 +411,7 @@ def compute_returns(trajectory, winner, baseline, gamma=0.98):
 
 def train_on_round(round_trajectories, round_returns, batch_size=256):
     all_returns_flat = np.concatenate([np.array(r, dtype=np.float32) for r in round_returns if len(r) > 0])
-    global_mean = all_returns_flat.mean()
-    global_std = all_returns_flat.std()
+    global_mean, global_std = update_running_stats(all_returns_flat)
 
     total_learner_steps = len(all_returns_flat)
 
@@ -457,7 +452,7 @@ def train_on_round(round_trajectories, round_returns, batch_size=256):
             entropy_total += entropy.item()
             entropy_batches += 1
 
-            chunk_loss = -(log_probs * chunk_returns).mean() - 0.5 * entropy
+            chunk_loss = -(log_probs * chunk_returns).mean() - 0.03 * entropy
             chunk_loss = chunk_loss * (end - start) / total_learner_steps
 
             chunk_loss.backward()
@@ -466,6 +461,21 @@ def train_on_round(round_trajectories, round_returns, batch_size=256):
     optim.step()
 
     return entropy_total / max(entropy_batches, 1)
+
+def update_running_stats(returns_flat):
+    global running_mean, running_var, running_initialized
+    batch_mean = returns_flat.mean()
+    batch_var = returns_flat.var()
+
+    if not running_initialized:
+        running_mean = batch_mean
+        running_var = batch_var
+        running_initialized = True
+    else:
+        running_mean = (1 - norm_momentum) * running_mean + norm_momentum * batch_mean
+        running_var = (1 - norm_momentum) * running_var + norm_momentum * batch_var
+
+    return running_mean, np.sqrt(running_var)
 
 if __name__ == "__main__":
     main()
