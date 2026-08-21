@@ -52,7 +52,9 @@ class Value(nn.Module):
         x = self.linear1(x)
         x = F.relu(x)
         x = self.linear2(x)
-        x = F.tanh(x)
+        # No tanh here: your returns (flag capture, stall penalties, etc.)
+        # range well outside (-1, 1), so squashing the output would just
+        # saturate the value head and kill its gradient near the extremes.
         return x
 
 class Backbone(nn.Module):
@@ -101,4 +103,3 @@ class ResidualBlock(nn.Module):
         x = x + residual
         x = F.relu(x)
         return x
-
